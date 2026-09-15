@@ -9,11 +9,16 @@ export function AuthProvider({ children }) {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    // On refresh there is no token in memory (by design — no localStorage),
-    // so the app simply lands unauthenticated. This effect exists so future
-    // real-backend integration (e.g. httpOnly cookie session) can resolve
-    // the session here without changing any component.
-    setInitializing(false);
+    if (!sessionStore.token) {
+      setInitializing(false);
+      return;
+    }
+
+    authApi
+      .me()
+      .then(({ user }) => setUser(user))
+      .catch(() => sessionStore.clearToken())
+      .finally(() => setInitializing(false));
   }, []);
 
   async function loginAsAdmin(name, password) {

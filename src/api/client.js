@@ -8,16 +8,17 @@ function getToken() {
   return sessionStore.token;
 }
 
-// In-memory token store (NOT localStorage — see spec section 4).
-// Token lives only for the lifetime of the JS runtime/tab; on refresh the
-// app re-resolves the session via GET /api/auth/me against the configured API.
+const TOKEN_STORAGE_KEY = "school-competition-auth-token";
+
 export const sessionStore = {
-  token: null,
+  token: localStorage.getItem(TOKEN_STORAGE_KEY),
   setToken(token) {
     this.token = token;
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
   },
   clearToken() {
     this.token = null;
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   },
 };
 

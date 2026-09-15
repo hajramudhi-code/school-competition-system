@@ -3,8 +3,9 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ allow, children }) {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
 
+  if (initializing) return null;
   if (!user) {
     return <Navigate to="/" replace />;
   }
