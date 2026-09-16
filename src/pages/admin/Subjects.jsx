@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { subjectsApi } from "../../api/subjectsApi";
+import { getSubjectCode } from "../../utils/liveState";
 import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, InlineConfirm, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function Subjects() {
@@ -180,5 +181,4 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
 const th = { padding: "12px 16px", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 };
 const td = { padding: "12px 16px" };
 const formatDate = (value) => value ? new Date(value).toLocaleDateString() : "-";
-const getSubjectCode = (subject) => subject.code || subject.subjectCode || "-";
 const Row = ({ label, value }) => <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "var(--text-muted)" }}>{label}</span><strong>{value}</strong></div>;

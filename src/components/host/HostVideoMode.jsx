@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import VideoQuestionCard from "../questions/VideoQuestionCard";
 import HostControls from "./HostControls";
+import { getSubjectCode } from "../../utils/liveState";
 
 export default function HostVideoMode({
   subjects,
@@ -49,7 +50,7 @@ export default function HostVideoMode({
                   opacity: disabled ? 0.5 : 1,
                 }}
               >
-                {compactSubjectName(s)}
+                {getSubjectCode(s)}
               </button>
             );
           })}
@@ -115,6 +116,3 @@ export default function HostVideoMode({
   );
 }
 
-function compactSubjectName(subject) {
-  return subject.code || subject.subjectCode || "-";
-}

@@ -10,6 +10,7 @@ import ControllerVideoMode from "../../components/controller/ControllerVideoMode
 import ResultAnimation from "../../components/controller/ResultAnimation";
 import SubjectCarousel from "../../components/controller/SubjectCarousel";
 import QuestionNumberRow from "../../components/controller/QuestionNumberRow";
+import { getQuestionSlots } from "../../utils/liveState";
 
 export default function ControllerPage() {
   const { user, logout } = useAuth();
@@ -109,7 +110,7 @@ export default function ControllerPage() {
           <>
             <ScoreBoard schoolA={state.schoolA} schoolB={state.schoolB} currentSchoolId={state.currentSchoolId} size="large" />
             <SubjectCarousel subjects={subjects} selectedSubjectId={state.currentSubjectId} />
-            {controllerMode === "NORMAL" && <QuestionNumberRow slots={state.questionSlots} selectedQuestionId={state.currentQuestion?.id} />}
+            {controllerMode === "NORMAL" && <QuestionNumberRow slots={getQuestionSlots(state)} selectedQuestionId={state.currentQuestion?.id} />}
             {controllerMode === "NORMAL" ? (
               <ControllerNormalMode currentQuestion={state.currentQuestion} timer={state.timer} />
             ) : (

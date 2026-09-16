@@ -1,6 +1,7 @@
 import React from "react";
 import QuestionSelector from "../questions/QuestionSelector";
 import QuestionPanel from "../questions/QuestionPanel";
+import { getSubjectCode } from "../../utils/liveState";
 
 export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, busy }) {
   return (
@@ -19,7 +20,7 @@ export default function HostNormalMode({ subjects, currentSubjectId, onSelectSub
                 className={`btn host-subject-button ${active ? "is-active" : ""}`}
                 style={{ background: active ? "var(--blue-primary)" : "var(--bg-card-elevated)", color: active ? "#fff" : disabled ? "var(--text-disabled)" : "var(--text-main)", border: "1px solid var(--border-color)", opacity: disabled ? 0.5 : 1 }}
               >
-                {compactSubjectName(s)}
+                {getSubjectCode(s)}
               </button>
             );
           })}
@@ -34,6 +35,3 @@ export default function HostNormalMode({ subjects, currentSubjectId, onSelectSub
   );
 }
 
-function compactSubjectName(subject) {
-  return subject.code || subject.subjectCode || "-";
-}

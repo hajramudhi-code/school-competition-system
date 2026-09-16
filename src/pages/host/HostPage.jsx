@@ -8,6 +8,7 @@ import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
 import HostControls from "../../components/host/HostControls";
+import { getQuestionSlots } from "../../utils/liveState";
 
 export default function HostPage() {
   const { user, logout } = useAuth();
@@ -144,7 +145,7 @@ export default function HostPage() {
                   subjects={subjects}
                   currentSubjectId={state.currentSubjectId}
                   onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
-                  questionSlots={state.questionSlots || []}
+                  questionSlots={getQuestionSlots(state)}
                   onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
                   currentQuestion={state.currentQuestion}
                   onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.currentQuestion.id, result))}
