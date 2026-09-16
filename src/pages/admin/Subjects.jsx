@@ -5,6 +5,7 @@ import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, InlineConfirm
 
 export default function Subjects() {
   const [subjects, setSubjects] = useState(null);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(null);
   const [viewSubject, setViewSubject] = useState(null);
@@ -14,11 +15,11 @@ export default function Subjects() {
   function load() {
     setError(null);
     subjectsApi
-      .list({})
+      .list({ search })
       .then((res) => setSubjects(res.data))
       .catch((e) => setError(e.message));
   }
-  usePolling(load);
+  usePolling(load, 5000, [search]);
 
   async function toggleStatus(subject) {
     const next = subject.status === "ENABLED" ? "DISABLED" : "ENABLED";
@@ -47,11 +48,12 @@ export default function Subjects() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <p>Subjects are reused across seasons — disable one instead of deleting it when it's not in play.</p>
-        <button className="btn btn-primary" onClick={() => setShowForm({})}>
-          + Add Subject
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search subjects..." aria-label="Search subjects" />
+          <button className="btn btn-primary" onClick={() => setShowForm({})}>+ Add Subject</button>
+        </div>
       </div>
 
       {subjects.length === 0 ? (

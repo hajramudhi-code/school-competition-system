@@ -50,7 +50,8 @@ export default function Reports() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `competition-report-${report.reportId}.pdf`;
+      const competitionName = competitions.find((competition) => competition.id === selectedId)?.name || "competition-report";
+      a.download = `${sanitizeFilename(competitionName)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -93,4 +94,12 @@ export default function Reports() {
       </div>
     </div>
   );
+}
+
+function sanitizeFilename(value) {
+  return value
+    .trim()
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "competition-report";
 }

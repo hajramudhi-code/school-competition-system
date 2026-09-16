@@ -4,6 +4,7 @@ import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, LogoUpload, I
 
 export default function Schools() {
   const [schools, setSchools] = useState(null);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(null); // null | {} | school
   const [viewSchool, setViewSchool] = useState(null);
@@ -13,11 +14,11 @@ export default function Schools() {
   function load() {
     setError(null);
     schoolsApi
-      .list({})
+      .list({ search })
       .then((res) => setSchools(res.data))
       .catch((e) => setError(e.message));
   }
-  usePolling(load);
+  usePolling(load, 5000, [search]);
 
   async function toggleStatus(school) {
     const next = school.status === "ENABLED" ? "DISABLED" : "ENABLED";
@@ -46,11 +47,12 @@ export default function Schools() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <p>Schools are reusable across competitions — disable rather than delete when a school sits out a season.</p>
-        <button className="btn btn-primary" onClick={() => setShowForm({})}>
-          + Add School
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search schools..." aria-label="Search schools" />
+          <button className="btn btn-primary" onClick={() => setShowForm({})}>+ Add School</button>
+        </div>
       </div>
 
       {schools.length === 0 ? (

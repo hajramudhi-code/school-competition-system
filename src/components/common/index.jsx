@@ -63,7 +63,7 @@ export function EmptyState({ title = "Nothing here yet", description, action }) 
   );
 }
 
-export function LogoUpload({ value, onChange, label = "Logo (optional)", maxBytes = 2 * 1024 * 1024, minDimension = 128, maxDimension = 2048, aspectRatio = 1, aspectTolerance = 0.15 }) {
+export function LogoUpload({ value, onChange, onFileChange, label = "Logo (optional)", maxBytes = 2 * 1024 * 1024, minDimension = 128, maxDimension = 2048, aspectRatio = 1, aspectTolerance = 0.15 }) {
   const [error, setError] = useState("");
 
   function handleChange(event) {
@@ -82,6 +82,7 @@ export function LogoUpload({ value, onChange, label = "Logo (optional)", maxByte
           return setError(`Image dimensions must be between ${minDimension} and ${maxDimension} px.`);
         }
         if (Math.abs(ratio - aspectRatio) > aspectTolerance) return setError("Logo must use a square 1:1 aspect ratio.");
+        onFileChange?.(file);
         onChange(reader.result);
       };
       image.onerror = () => setError("The selected image could not be read.");

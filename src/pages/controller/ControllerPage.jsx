@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { matchesApi } from "../../api/matchesApi";
+import { competitionsApi } from "../../api/competitionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
 import { controllerApi, subscribeToLiveState } from "../../api/liveMatchApi";
 import { LoadingState, ErrorState, useToast } from "../../components/common/index.jsx";
@@ -25,11 +26,13 @@ export default function ControllerPage() {
   const loadAssignment = useCallback(async () => {
     setError(null);
     try {
-      const [subjectResponse, activeResponse] = await Promise.all([
+      const [subjectResponse, competition, activeResponse] = await Promise.all([
         subjectsApi.list({}),
+        competitionsApi.get(user.competitionId),
         matchesApi.list({ competitionId: user.competitionId, status: "IN_PROGRESS" }),
       ]);
-      setSubjects(subjectResponse.data);
+      const selectedSubjectIds = new Set(competition.subjectIds || []);
+      setSubjects(subjectResponse.data.filter((subject) => subject.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
       let match = activeResponse.data[0];
       if (!match) {
         const upcomingResponse = await matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" });

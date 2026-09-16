@@ -85,6 +85,7 @@ export const apiClient = {
   get: (path) => request(path),
   post: (path, body, opts) => request(path, { method: "POST", body, ...opts }),
   patch: (path, body) => request(path, { method: "PATCH", body }),
+  patchForm: (path, formData) => request(path, { method: "PATCH", body: formData, isFormData: true }),
   put: (path, body) => request(path, { method: "PUT", body }),
   delete: (path) => request(path, { method: "DELETE" }),
   postForm: (path, formData) => request(path, { method: "POST", body: formData, isFormData: true }),

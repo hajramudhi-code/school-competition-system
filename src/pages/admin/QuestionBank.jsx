@@ -12,6 +12,7 @@ export default function QuestionBank() {
   const pageSize = 20;
   const [error, setError] = useState(null);
   const [filterSubject, setFilterSubject] = useState("");
+  const [search, setSearch] = useState("");
   const [showManualForm, setShowManualForm] = useState(false);
   const [showDownloadConfig, setShowDownloadConfig] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -19,7 +20,7 @@ export default function QuestionBank() {
 
   function load() {
     setError(null);
-    const questionParams = { page, pageSize, ...(filterSubject ? { subjectId: filterSubject } : {}) };
+    const questionParams = { page, pageSize, ...(filterSubject ? { subjectId: filterSubject } : {}), ...(search.trim() ? { search: search.trim() } : {}) };
     Promise.all([subjectsApi.list({}), questionsApi.list(questionParams)])
       .then(([s, q]) => {
         setSubjects(s.data);
@@ -30,7 +31,7 @@ export default function QuestionBank() {
       })
       .catch((e) => setError(e.message));
   }
-  usePolling(load, 5000, [filterSubject, page]);
+  usePolling(load, 5000, [filterSubject, page, search]);
 
   async function removeQuestion(id) {
     try {
@@ -48,6 +49,7 @@ export default function QuestionBank() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <input className="input" style={{ width: 220 }} value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search questions..." aria-label="Search questions" />
         <select className="input" style={{ width: 220 }} value={filterSubject} onChange={(e) => { setFilterSubject(e.target.value); setPage(1); }}>
           <option value="">All subjects</option>
           {subjects.map((s) => (

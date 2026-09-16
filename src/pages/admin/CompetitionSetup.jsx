@@ -155,6 +155,7 @@ function getStaffResponseId(staff, role) {
 function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
   const [name, setName] = useState(sponsor?.name || "");
   const [logoUrl, setLogoUrl] = useState(sponsor?.logoUrl || "");
+  const [logoFile, setLogoFile] = useState(null);
   const [contact, setContact] = useState(readContact(sponsor?.contactInfo));
   const [slogan, setSlogan] = useState(sponsor?.slogan || "");
   const [includeInReport, setIncludeInReport] = useState(sponsor?.includeInReport !== false);
@@ -165,6 +166,7 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
   useEffect(() => {
     setName(sponsor?.name || "");
     setLogoUrl(sponsor?.logoUrl || "");
+    setLogoFile(null);
     setContact(readContact(sponsor?.contactInfo));
     setSlogan(sponsor?.slogan || "");
     setIncludeInReport(sponsor?.includeInReport !== false);
@@ -176,8 +178,22 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
     if (!name.trim()) return setError("Sponsor name is required when adding a sponsor.");
     setBusy(true);
     try {
-      const payload = { name: name.trim(), logoUrl: logoUrl || null, contactInfo: contact, slogan: slogan.trim() || null, includeInReport };
-      const saved = sponsor ? await sponsorsApi.update(sponsor.id, payload) : await sponsorsApi.create(payload);
+      const contactInfo = Object.fromEntries(Object.entries(contact).filter(([, value]) => value.trim()));
+      const payload = { name: name.trim(), slogan: slogan.trim() || null, includeInReport };
+      if (Object.keys(contactInfo).length) payload.contactInfo = contactInfo;
+      if (logoUrl && !logoFile && !logoUrl.startsWith("data:")) payload.logoUrl = logoUrl;
+      let saved;
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append("name", payload.name);
+        formData.append("logo", logoFile);
+        formData.append("contactInfo", JSON.stringify(payload.contactInfo));
+        if (payload.slogan) formData.append("slogan", payload.slogan);
+        formData.append("includeInReport", String(payload.includeInReport));
+        saved = sponsor ? await sponsorsApi.updateWithLogo(sponsor.id, formData) : await sponsorsApi.createWithLogo(formData);
+      } else {
+        saved = sponsor ? await sponsorsApi.update(sponsor.id, payload) : await sponsorsApi.create(payload);
+      }
       await competitionsApi.update(competition.id, { sponsorId: saved.id });
       showToast("Sponsor saved", "success");
       onSaved();
@@ -216,7 +232,7 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
             <label className="field-label">Sponsor Name</label>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zanzibar Telecom" />
           </div>
-          <LogoUpload value={logoUrl} onChange={setLogoUrl} label="Sponsor logo" />
+          <LogoUpload value={logoUrl} onChange={setLogoUrl} onFileChange={setLogoFile} label="Sponsor logo" />
           <div>
             <label className="field-label">Phone Number</label>
             <input className="input" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} placeholder="+255..." />
@@ -410,11 +426,13 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
 }
 
 function AssignStaffModal({ competition, onClose, onSaved }) {
-  const [hostName, setHostName] = useState("");
-  const [hostUsername, setHostUsername] = useState("");
+  const host = getAssignedStaff(competition, "host");
+  const controller = getAssignedStaff(competition, "controller");
+  const [hostName, setHostName] = useState(host.name);
+  const [hostUsername, setHostUsername] = useState(host.username);
   const [hostPassword, setHostPassword] = useState("");
-  const [controllerName, setControllerName] = useState("");
-  const [controllerUsername, setControllerUsername] = useState("");
+  const [controllerName, setControllerName] = useState(controller.name);
+  const [controllerUsername, setControllerUsername] = useState(controller.username);
   const [controllerPassword, setControllerPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -426,11 +444,19 @@ function AssignStaffModal({ competition, onClose, onSaved }) {
     try {
       let host;
       let controller;
-      if (hostName && hostUsername && hostPassword) {
-        host = await usersApi.assignHost(competition.id, { name: hostName, username: hostUsername, password: hostPassword });
+      if (host.id) {
+        if (hostName.trim() || hostUsername.trim() || hostPassword.trim()) {
+          host = await usersApi.updateStaff(host.id, buildStaffPayload(hostName, hostUsername, hostPassword));
+        }
+      } else if (hostName && hostUsername && hostPassword) {
+        host = await usersApi.assignHost(competition.id, { name: hostName.trim(), username: hostUsername.trim(), password: hostPassword });
       }
-      if (controllerName && controllerUsername && controllerPassword) {
-        controller = await usersApi.assignController(competition.id, { name: controllerName, username: controllerUsername, password: controllerPassword });
+      if (controller.id) {
+        if (controllerName.trim() || controllerUsername.trim() || controllerPassword.trim()) {
+          controller = await usersApi.updateStaff(controller.id, buildStaffPayload(controllerName, controllerUsername, controllerPassword));
+        }
+      } else if (controllerName && controllerUsername && controllerPassword) {
+        controller = await usersApi.assignController(competition.id, { name: controllerName.trim(), username: controllerUsername.trim(), password: controllerPassword });
       }
       onSaved({ host, controller });
     } catch (e) {
@@ -450,6 +476,7 @@ function AssignStaffModal({ competition, onClose, onSaved }) {
             <input className="input" placeholder="Host Username" value={hostUsername} onChange={(e) => setHostUsername(e.target.value)} />
             <PasswordInput placeholder="Host Password" value={hostPassword} onChange={(e) => setHostPassword(e.target.value)} />
           </div>
+          {host.id && <button type="button" className="btn btn-danger" style={{ marginTop: 10 }} disabled title="Remove endpoint is not available yet">Remove Host</button>}
         </div>
         <div>
           <h4 style={{ marginBottom: 10 }}>Controller</h4>
@@ -458,6 +485,7 @@ function AssignStaffModal({ competition, onClose, onSaved }) {
             <input className="input" placeholder="Controller Username" value={controllerUsername} onChange={(e) => setControllerUsername(e.target.value)} />
             <PasswordInput placeholder="Controller Password" value={controllerPassword} onChange={(e) => setControllerPassword(e.target.value)} />
           </div>
+          {controller.id && <button type="button" className="btn btn-danger" style={{ marginTop: 10 }} disabled title="Remove endpoint is not available yet">Remove Controller</button>}
         </div>
         {error && <span className="field-error">{error}</span>}
         <button className="btn btn-primary" disabled={busy}>
@@ -466,4 +494,17 @@ function AssignStaffModal({ competition, onClose, onSaved }) {
       </form>
     </Modal>
   );
+}
+
+function getAssignedStaff(competition, role) {
+  const staff = competition[role] || competition[`${role}Staff`] || competition[`${role}User`] || {};
+  return {
+    id: competition[`${role}Id`] || staff.id || staff.staffId || staff.user?.id || "",
+    name: getStaffName(competition, role),
+    username: staff.username || staff.user?.username || "",
+  };
+}
+
+function buildStaffPayload(name, username, password) {
+  return Object.fromEntries(Object.entries({ name: name.trim(), username: username.trim(), password: password.trim() }).filter(([, value]) => value));
 }
