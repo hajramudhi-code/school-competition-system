@@ -60,10 +60,15 @@ This document is the backend handoff contract for every API currently called by 
 {
   "id": "subj_001",
   "name": "Mathematics",
+  "code": "MATH",
   "status": "ENABLED",
-  "createdAt": "2025-01-10T08:00:00Z"
+  "createdAt": "2025-01-10T08:00:00Z",
+  "updatedAt": "2025-01-10T08:00:00Z"
 }
 ```
+- `code` is required, unique, and must be returned by both `GET /api/subjects` and `GET /api/subjects/:id`.
+- The frontend displays the backend `code` exactly as returned; it does not generate a code from the subject name.
+- `updatedAt` must change on every successful subject edit or status change.
 
 ### Shared object: `Question`
 ```json
@@ -194,6 +199,12 @@ Notes:
 - Success `200`: `School`
 - Notes: A `DISABLED` school must be rejected by `POST /api/competitions` and `PATCH /api/competitions/:id/schools` if included in `schoolIds` (`400` with `{ "message": "School <id> is disabled" }`).
 
+### 4.6 Delete School
+`DELETE /api/schools/:id`
+- Auth: ADMIN.
+- Success `204`.
+- Errors: `409` if the school is referenced by a competition or match. Prefer `PATCH /status` when historical data must be retained.
+
 ---
 
 ## 5. Subjects API
@@ -202,16 +213,27 @@ Mirrors Schools.
 
 ### 5.1 List Subjects
 `GET /api/subjects?status=&search=`
-- Success `200`: `{ "data": [Subject], ... }`
+- Success `200`: `{ "data": [Subject], "page": 1, "pageSize": 20, "total": 42 }`
 
 ### 5.2 Create Subject
 `POST /api/subjects`
-- Auth: ADMIN. Required: `name`.
+- Auth: ADMIN. Required: `name`, `code`.
 - Success `201`: `Subject`. Errors: `409` duplicate.
+
+### 5.2.1 Get Subject
+`GET /api/subjects/:id`
+- Auth: ADMIN.
+- Success `200`: `Subject`.
+
+### 5.2.2 Delete Subject
+`DELETE /api/subjects/:id`
+- Auth: ADMIN.
+- Success `204`.
+- Errors: `409` if the subject is referenced by questions or competitions. Prefer `PATCH /status` when historical data must be retained.
 
 ### 5.3 Update Subject
 `PATCH /api/subjects/:id`
-- Auth: ADMIN. Optional: `name`.
+- Auth: ADMIN. Optional: `name`, `code`. If supplied, `code` must remain unique.
 - Success `200`: `Subject`
 
 ### 5.4 Enable / Disable Subject
@@ -226,7 +248,8 @@ Mirrors Schools.
 ### 6.1 List Questions
 `GET /api/questions?subjectId=&mode=&isVideoQuestion=&status=&search=&page=&pageSize=`
 - Auth: ADMIN.
-- Success `200`: `{ "data": [Question], ... }`
+- Success `200`: `{ "data": [Question], "page": 1, "pageSize": 20, "total": 42 }`
+- When `page` and `pageSize` are supplied, return only that page and preserve the requested values in the response metadata.
 
 ### 6.2 Get Question
 `GET /api/questions/:id`
@@ -319,6 +342,10 @@ Mirrors Schools.
   "schoolIds": ["sch_001", "sch_002", "sch_003", "sch_004"],
   "hostId": "hst_001",
   "controllerId": "ctl_001",
+  "hostName": "Juma Mohamed Juma",
+  "controllerName": "Aisha Mohamed",
+  "host": { "id": "hst_001", "name": "Juma Mohamed Juma", "role": "HOST" },
+  "controller": { "id": "ctl_001", "name": "Aisha Mohamed", "role": "CONTROLLER" },
   "status": "UPCOMING",
   "sponsorId": "spn_001"
 }
@@ -352,6 +379,7 @@ Mirrors Schools.
 - Auth: ADMIN.
 - Required: `name`, `username`, `password`.
 - Success `201`: `{ "id": "hst_001", "name": "Peter K.", "username": "peterk", "role": "HOST", "competitionId": "cmp_001" }`
+- The response name must also be persisted and exposed by `GET /api/competitions/:id` as `hostName` or `host.name`.
 - Errors: `409` username taken.
 
 ### 9.2 Assign Controller to Competition
@@ -359,6 +387,7 @@ Mirrors Schools.
 - Auth: ADMIN.
 - Required: `name`, `username`, `password`.
 - Success `201`: `{ "id": "ctl_001", "name": "Aisha M.", "username": "aisham", "role": "CONTROLLER", "competitionId": "cmp_001" }`
+- The response name must also be persisted and exposed by `GET /api/competitions/:id` as `controllerName` or `controller.name`.
 
 ### 9.3 Update Host/Controller Credentials
 `PATCH /api/staff/:id`
@@ -456,7 +485,7 @@ All endpoints below require `Authorization` as `HOST` and that the `HOST` is ass
 ### 12.3 Select Subject
 `POST /api/matches/:id/select-subject`
 - Required: `subjectId` (must be `ENABLED` and part of the competition's `subjectIds`).
-- Success `200`: `LiveMatchState`
+- Success `200`: `LiveMatchState` whose `currentSubjectId` equals the submitted `subjectId` and whose `questionSlots` contains the available questions for that subject in deterministic slot order.
 - Errors: `400` disabled/unregistered subject.
 
 ### 12.4 Select Question
@@ -550,6 +579,11 @@ Controller endpoints are strictly read-plus-mode-toggle. No endpoint here can mu
   "matchStatus": "IN_PROGRESS"
 }
 ```
+- `questionSlots` is required and must be an array on every live-state response, including immediately after `select-subject`.
+- Each slot must contain `questionId`, `slot` (positive integer), and `status` (`AVAILABLE`, `SELECTED`, `COMPLETED`, or `DISABLED`).
+- For `questionMode = NORMAL`, slots must contain only non-video questions belonging to `currentSubjectId`.
+- For `questionMode = VIDEO`, video-question data must belong to `currentSubjectId` and use stable `slot` values.
+- If a subject has no eligible questions, return `questionSlots: []` and a successful live state; do not omit the field.
 
 ---
 
