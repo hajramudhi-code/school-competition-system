@@ -19,6 +19,7 @@ export default function HostPage() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const timeoutFiredRef = useRef(false);
+  const latestMutationRef = useRef(0);
 
   const loadAssignment = useCallback(async () => {
     setError(null);
@@ -46,9 +47,12 @@ export default function HostPage() {
 
   const refresh = useCallback(() => {
     if (!matchId) return;
+    const requestStartedAt = Date.now();
     hostApi
       .getLiveState(matchId)
-      .then(setState)
+      .then((nextState) => {
+        if (requestStartedAt >= latestMutationRef.current) setState(nextState);
+      })
       .catch((e) => setError(e.message));
   }, [matchId]);
 
@@ -73,10 +77,12 @@ export default function HostPage() {
   }, [state?.lastResult, showToast]);
 
   async function guarded(fn) {
+    latestMutationRef.current = Date.now();
     setBusy(true);
     try {
       const result = await fn();
       if (result) setState(result);
+      refresh();
     } catch (e) {
       showToast(e.message, "error");
     } finally {
@@ -138,7 +144,7 @@ export default function HostPage() {
                   subjects={subjects}
                   currentSubjectId={state.currentSubjectId}
                   onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
-                  questionSlots={state.questionSlots}
+                  questionSlots={state.questionSlots || []}
                   onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
                   currentQuestion={state.currentQuestion}
                   onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.currentQuestion.id, result))}

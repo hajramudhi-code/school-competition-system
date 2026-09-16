@@ -26,8 +26,8 @@ export default function CompetitionSetup() {
         setCompetitions(competitionDetails);
         setStaffNames((current) => competitionDetails.reduce((names, competition) => ({
           ...names,
-          ...(competition.hostName || competition.host?.name ? { [competition.hostId]: competition.hostName || competition.host.name } : {}),
-          ...(competition.controllerName || competition.controller?.name ? { [competition.controllerId]: competition.controllerName || competition.controller.name } : {}),
+          ...(getStaffName(competition, "host") ? { [competition.hostId]: getStaffName(competition, "host") } : {}),
+          ...(getStaffName(competition, "controller") ? { [competition.controllerId]: getStaffName(competition, "controller") } : {}),
         }), current));
         setSchools(s.data);
         setSubjects(sub.data);
@@ -73,7 +73,7 @@ export default function CompetitionSetup() {
                 {c.startDate} – {c.endDate} · {c.schoolIds.length} schools · {c.subjectIds.length} subjects
               </p>
               <p style={{ fontSize: 13, marginTop: 4 }}>
-                Host: {c.hostId ? staffNames[c.hostId] || c.hostName || c.host?.name || "Assigned" : "Unassigned"} · Controller: {c.controllerId ? staffNames[c.controllerId] || c.controllerName || c.controller?.name || "Assigned" : "Unassigned"}
+                Host: {c.hostId ? staffNames[c.hostId] || getStaffName(c, "host") || c.hostId : "Unassigned"} · Controller: {c.controllerId ? staffNames[c.controllerId] || getStaffName(c, "controller") || c.controllerId : "Unassigned"}
               </p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -125,8 +125,8 @@ export default function CompetitionSetup() {
             setAssignFor(null);
             setStaffNames((current) => ({
               ...current,
-              ...(host?.id && host.name ? { [host.id]: host.name } : {}),
-              ...(controller?.id && controller.name ? { [controller.id]: controller.name } : {}),
+              ...(getStaffResponseName(host) ? { [getStaffResponseId(host, "host")]: getStaffResponseName(host) } : {}),
+              ...(getStaffResponseName(controller) ? { [getStaffResponseId(controller, "controller")]: getStaffResponseName(controller) } : {}),
             }));
             load();
             showToast("Host/Controller assigned", "success");
@@ -135,6 +135,21 @@ export default function CompetitionSetup() {
       )}
     </div>
   );
+}
+
+function getStaffName(competition, role) {
+  const prefix = role === "host" ? "host" : "controller";
+  const staff = competition[prefix] || competition[`${prefix}Staff`] || competition[`${prefix}User`];
+  if (typeof staff === "string") return staff;
+  return competition[`${prefix}Name`] || staff?.name || staff?.fullName || staff?.displayName || "";
+}
+
+function getStaffResponseName(staff) {
+  return staff?.name || staff?.fullName || staff?.displayName || staff?.user?.name || "";
+}
+
+function getStaffResponseId(staff, role) {
+  return staff?.id || staff?.staffId || staff?.user?.id || `${role}-assigned`;
 }
 
 function SponsorPanel({ competition, sponsor, onSaved, showToast }) {

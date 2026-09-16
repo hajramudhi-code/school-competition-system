@@ -180,5 +180,5 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
 const th = { padding: "12px 16px", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 };
 const td = { padding: "12px 16px" };
 const formatDate = (value) => value ? new Date(value).toLocaleDateString() : "-";
-const getSubjectCode = (subject) => subject.code || subject.subjectCode || subject.name.trim().split(/\s+/).map((word) => word[0]).join("").slice(0, 6).toUpperCase() || "-";
+const getSubjectCode = (subject) => subject.code || subject.subjectCode || "-";
 const Row = ({ label, value }) => <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "var(--text-muted)" }}>{label}</span><strong>{value}</strong></div>;

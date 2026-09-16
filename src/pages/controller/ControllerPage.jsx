@@ -82,7 +82,7 @@ export default function ControllerPage() {
       className={`controller-page ${controllerMode === "NORMAL" ? "controller-normal-page" : ""}`}
       style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
     >
-      <ResultAnimation lastResult={state.lastResult} />
+      <ResultAnimation lastResult={state?.lastResult} />
 
       <header
         style={{

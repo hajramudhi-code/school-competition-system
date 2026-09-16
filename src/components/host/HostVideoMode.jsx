@@ -116,8 +116,5 @@ export default function HostVideoMode({
 }
 
 function compactSubjectName(subject) {
-  if (subject.code) return subject.code;
-  const name = subject.name;
-  const words = name.trim().split(/\s+/);
-  return words.length > 1 ? `${words[0][0]}/${words.slice(1).join(" ").toLowerCase()}` : name;
+  return subject.code || subject.subjectCode || "-";
 }

@@ -7,7 +7,7 @@ const STATE_STYLES = {
   DISABLED: { background: "var(--bg-secondary)", color: "var(--text-disabled)", border: "1px solid var(--border-color)" },
 };
 
-export default function QuestionSelector({ slots, onSelect, columns = 10 }) {
+export default function QuestionSelector({ slots = [], onSelect, columns = 10 }) {
   return (
     <div className="card question-selector">
       <h4 style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.05em", marginBottom: 12 }}>SELECT QUESTION</h4>
