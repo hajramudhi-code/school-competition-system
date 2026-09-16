@@ -20,8 +20,9 @@ export default function CompetitionSetup() {
   function load() {
     setError(null);
     Promise.all([competitionsApi.list({}), schoolsApi.list({}), subjectsApi.list({}), sponsorsApi.list()])
-      .then(([c, s, sub, sponsorResponse]) => {
-        setCompetitions(c.data);
+      .then(async ([c, s, sub, sponsorResponse]) => {
+        const competitionDetails = await Promise.all(c.data.map((competition) => competitionsApi.get(competition.id)));
+        setCompetitions(competitionDetails);
         setSchools(s.data);
         setSubjects(sub.data);
         setSponsors(sponsorResponse.data);

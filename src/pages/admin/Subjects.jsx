@@ -6,6 +6,7 @@ export default function Subjects() {
   const [subjects, setSubjects] = useState(null);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(null);
+  const [viewSubject, setViewSubject] = useState(null);
   const { showToast } = useToast();
 
   function load() {
@@ -22,6 +23,17 @@ export default function Subjects() {
     try {
       await subjectsApi.setStatus(subject.id, next);
       showToast(`${subject.name} ${next.toLowerCase()}`, "success");
+      load();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  }
+
+  async function removeSubject(subject) {
+    if (!window.confirm(`Delete ${subject.name}?`)) return;
+    try {
+      await subjectsApi.remove(subject.id);
+      showToast("Subject deleted", "success");
       load();
     } catch (e) {
       showToast(e.message, "error");
@@ -47,26 +59,38 @@ export default function Subjects() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: "left", background: "var(--bg-card-elevated)" }}>
+                <th style={th}>#</th>
                 <th style={th}>Subject</th>
                 <th style={th}>Code</th>
                 <th style={th}>Status</th>
+                <th style={th}>Registered</th>
+                <th style={th}>Updated</th>
                 <th style={th}></th>
               </tr>
             </thead>
             <tbody>
               {subjects.map((s) => (
                 <tr key={s.id} style={{ borderTop: "1px solid var(--border-color)" }}>
+                  <td style={td}>{subjects.indexOf(s) + 1}</td>
                   <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1 }}>{s.name}</td>
                   <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1, fontWeight: 700 }}>{s.code || "—"}</td>
                   <td style={td}>
                     <StatusBadge status={s.status} />
                   </td>
+                  <td style={td}>{formatDate(s.createdAt)}</td>
+                  <td style={td}>{formatDate(s.updatedAt)}</td>
                   <td style={{ ...td, textAlign: "right" }}>
+                    <button className="btn btn-ghost" onClick={() => setViewSubject(s)}>
+                      View
+                    </button>
                     <button className="btn btn-ghost" onClick={() => setShowForm(s)}>
                       Edit
                     </button>
                     <button className="btn btn-ghost" onClick={() => toggleStatus(s)}>
                       {s.status === "ENABLED" ? "Disable" : "Enable"}
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => removeSubject(s)}>
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -86,7 +110,23 @@ export default function Subjects() {
           }}
         />
       )}
+      {viewSubject && <SubjectViewModal subject={viewSubject} onClose={() => setViewSubject(null)} />}
     </div>
+  );
+}
+
+function SubjectViewModal({ subject, onClose }) {
+  return (
+    <Modal title="Subject Details" onClose={onClose}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Row label="Name" value={subject.name} />
+        <Row label="Code" value={subject.code || "-"} />
+        <Row label="Status" value={subject.status} />
+        <Row label="Registered" value={formatDate(subject.createdAt)} />
+        <Row label="Updated" value={formatDate(subject.updatedAt)} />
+        <button className="btn btn-secondary" onClick={onClose}>Close</button>
+      </div>
+    </Modal>
   );
 }
 
@@ -137,3 +177,5 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
 
 const th = { padding: "12px 16px", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 };
 const td = { padding: "12px 16px" };
+const formatDate = (value) => value ? new Date(value).toLocaleDateString() : "-";
+const Row = ({ label, value }) => <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "var(--text-muted)" }}>{label}</span><strong>{value}</strong></div>;

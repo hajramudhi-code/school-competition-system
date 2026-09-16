@@ -22,10 +22,11 @@ export default function Matches() {
 
   useEffect(() => {
     Promise.all([competitionsApi.list({}), schoolsApi.list({})])
-      .then(([res, schoolResponse]) => {
-        setCompetitions(res.data);
+      .then(async ([res, schoolResponse]) => {
+        const details = await Promise.all(res.data.map((competition) => competitionsApi.get(competition.id)));
+        setCompetitions(details);
         setSchools(schoolResponse.data);
-        if (res.data[0]) setSelectedId(res.data[0].id);
+        if (details[0]) setSelectedId(details[0].id);
       })
       .catch((e) => setError(e.message));
   }, []);

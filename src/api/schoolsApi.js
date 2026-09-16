@@ -14,6 +14,7 @@ export const schoolsApi = {
   get: (id) => apiClient.get(`/schools/${id}`),
   create: (data) => apiClient.post("/schools", data),
   update: (id, data) => apiClient.patch(`/schools/${id}`, data),
+  remove: (id) => apiClient.delete(`/schools/${id}`),
   setStatus: (id, status) => apiClient.patch(`/schools/${id}/status`, { status }),
 };
 

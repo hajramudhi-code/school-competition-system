@@ -402,6 +402,7 @@ function DownloadTemplateModal({ subjects, onClose }) {
 
 function UploadTemplateModal({ subjects, onClose, onDone }) {
   const [subjectId, setSubjectId] = useState(subjects[0]?.id || "");
+  const [mode, setMode] = useState("MULTIPLE_CHOICE");
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -416,7 +417,7 @@ function UploadTemplateModal({ subjects, onClose, onDone }) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("subjectId", subjectId);
-      formData.append("mode", "MULTIPLE_CHOICE");
+      formData.append("mode", mode);
       const res = await templatesApi.upload(formData);
       setResult(res);
     } catch (e) {
@@ -438,6 +439,14 @@ function UploadTemplateModal({ subjects, onClose, onDone }) {
                   {s.name}
                 </option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Question Mode</label>
+            <select className="input" value={mode} onChange={(e) => setMode(e.target.value)}>
+              <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+              <option value="TRUE_FALSE">True / False</option>
+              <option value="MENTION">Mention</option>
             </select>
           </div>
           <div>

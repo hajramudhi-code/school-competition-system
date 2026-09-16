@@ -20,20 +20,29 @@ export default function HostPage() {
   const [busy, setBusy] = useState(false);
   const timeoutFiredRef = useRef(false);
 
-  useEffect(() => {
-    subjectsApi.list({}).then((res) => setSubjects(res.data));
-    matchesApi
-      .list({ competitionId: user.competitionId, status: "IN_PROGRESS" })
-      .then((res) => {
-        if (res.data[0]) return res.data[0];
-        return matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" }).then((r) => r.data[0]);
-      })
-      .then((match) => {
-        if (!match) return setError("No match is currently assigned to this competition.");
-        setMatchId(match.id);
-      })
-      .catch((e) => setError(e.message));
+  const loadAssignment = useCallback(async () => {
+    setError(null);
+    try {
+      const [subjectResponse, activeResponse] = await Promise.all([
+        subjectsApi.list({}),
+        matchesApi.list({ competitionId: user.competitionId, status: "IN_PROGRESS" }),
+      ]);
+      setSubjects(subjectResponse.data);
+      let match = activeResponse.data[0];
+      if (!match) {
+        const upcomingResponse = await matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" });
+        match = upcomingResponse.data[0];
+      }
+      if (!match) throw new Error("No match is currently assigned to this competition.");
+      setMatchId(match.id);
+    } catch (e) {
+      setError(e.message);
+    }
   }, [user.competitionId]);
+
+  useEffect(() => {
+    loadAssignment();
+  }, [loadAssignment]);
 
   const refresh = useCallback(() => {
     if (!matchId) return;
@@ -75,7 +84,7 @@ export default function HostPage() {
     }
   }
 
-  if (error) return <ErrorState message={error} onRetry={refresh} />;
+  if (error) return <ErrorState message={error} onRetry={loadAssignment} />;
   if (!state || !subjects) return <LoadingState label="Loading match control..." />;
 
   return (

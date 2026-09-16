@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { matchesApi } from "../../api/matchesApi";
 import { subjectsApi } from "../../api/subjectsApi";
 import { controllerApi, subscribeToLiveState } from "../../api/liveMatchApi";
-import { LoadingState, ErrorState } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, useToast } from "../../components/common/index.jsx";
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import ControllerNormalMode from "../../components/controller/ControllerNormalMode";
 import ControllerVideoMode from "../../components/controller/ControllerVideoMode";
@@ -19,21 +19,32 @@ export default function ControllerPage() {
   const [controllerMode, setControllerMode] = useState("NORMAL");
   const [error, setError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { showToast } = useToast();
+
+  const loadAssignment = useCallback(async () => {
+    setError(null);
+    try {
+      const [subjectResponse, activeResponse] = await Promise.all([
+        subjectsApi.list({}),
+        matchesApi.list({ competitionId: user.competitionId, status: "IN_PROGRESS" }),
+      ]);
+      setSubjects(subjectResponse.data);
+      let match = activeResponse.data[0];
+      if (!match) {
+        const upcomingResponse = await matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" });
+        match = upcomingResponse.data[0];
+      }
+      if (!match) throw new Error("No match is currently assigned to this competition.");
+      setMatchId(match.id);
+    } catch (e) {
+      setError(e.message);
+      showToast(e.message, "error");
+    }
+  }, [showToast, user.competitionId]);
 
   useEffect(() => {
-    subjectsApi.list({}).then((res) => setSubjects(res.data));
-    matchesApi
-      .list({ competitionId: user.competitionId, status: "IN_PROGRESS" })
-      .then((res) => {
-        if (res.data[0]) return res.data[0];
-        return matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" }).then((r) => r.data[0]);
-      })
-      .then((match) => {
-        if (!match) return setError("No match is currently assigned to this competition.");
-        setMatchId(match.id);
-      })
-      .catch((e) => setError(e.message));
-  }, [user.competitionId]);
+    loadAssignment();
+  }, [loadAssignment]);
 
   useEffect(() => {
     if (!matchId) return undefined;
@@ -66,7 +77,7 @@ export default function ControllerPage() {
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
 
-  if (error) return <ErrorState message={error} />;
+  if (error) return <ErrorState message={error} onRetry={loadAssignment} />;
   if (!state || !subjects) return <LoadingState label="Loading public display..." />;
 
   return (

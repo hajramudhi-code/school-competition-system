@@ -31,6 +31,12 @@ class ApiError extends Error {
   }
 }
 
+function notifyApiError(message) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("api-error", { detail: message }));
+  }
+}
+
 async function request(path, { method = "GET", body, isFormData = false, responseType = "json" } = {}) {
   const headers = {};
   if (!isFormData) headers["Content-Type"] = "application/json";
@@ -53,7 +59,9 @@ async function request(path, { method = "GET", body, isFormData = false, respons
       } catch {
         /* noop */
       }
-      throw new ApiError(res.status, payload);
+      const error = new ApiError(res.status, payload);
+      notifyApiError(error.message);
+      throw error;
     }
     return res.blob();
   }
@@ -66,7 +74,9 @@ async function request(path, { method = "GET", body, isFormData = false, respons
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, payload);
+    const error = new ApiError(res.status, payload);
+    notifyApiError(error.message);
+    throw error;
   }
   return payload;
 }

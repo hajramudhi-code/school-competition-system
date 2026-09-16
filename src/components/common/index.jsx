@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export function LoadingState({ label = "Loading..." }) {
   return (
@@ -171,9 +171,15 @@ export function ToastProvider({ children }) {
 
   const showToast = useCallback((message, tone = "info") => {
     const id = Math.random().toString(36).slice(2);
-    setToasts((t) => [...t, { id, message, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500);
+    setToasts((current) => current.some((toast) => toast.message === message && toast.tone === tone) ? current : [...current, { id, message, tone }]);
+    setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 10000);
   }, []);
+
+  useEffect(() => {
+    const handleApiError = (event) => showToast(event.detail || "Request failed", "error");
+    window.addEventListener("api-error", handleApiError);
+    return () => window.removeEventListener("api-error", handleApiError);
+  }, [showToast]);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
