@@ -11,6 +11,6 @@ export const questionsApi = {
 };
 
 export const templatesApi = {
-  requestDownload: (config) => apiClient.post("/questions/templates/download", config),
+  requestDownload: (config) => apiClient.post("/questions/templates/download", config, { responseType: "blob" }),
   upload: (formData) => apiClient.postForm("/questions/templates/upload", formData),
 };
