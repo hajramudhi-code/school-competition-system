@@ -3,7 +3,7 @@ import { competitionsApi, sponsorsApi } from "../../api/competitionsApi";
 import { schoolsApi } from "../../api/schoolsApi";
 import { subjectsApi } from "../../api/subjectsApi";
 import { usersApi } from "../../api/authApi";
-import { LoadingState, ErrorState, StatusBadge, Modal, LogoUpload, PasswordInput, useToast } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, StatusBadge, Modal, LogoUpload, PasswordInput, InlineConfirm, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function CompetitionSetup() {
   const [competitions, setCompetitions] = useState(null);
@@ -15,6 +15,7 @@ export default function CompetitionSetup() {
   const [showCreate, setShowCreate] = useState(false);
   const [editFor, setEditFor] = useState(null);
   const [assignFor, setAssignFor] = useState(null);
+  const [staffNames, setStaffNames] = useState({});
   const { showToast } = useToast();
 
   function load() {
@@ -23,13 +24,18 @@ export default function CompetitionSetup() {
       .then(async ([c, s, sub, sponsorResponse]) => {
         const competitionDetails = await Promise.all(c.data.map((competition) => competitionsApi.get(competition.id)));
         setCompetitions(competitionDetails);
+        setStaffNames((current) => competitionDetails.reduce((names, competition) => ({
+          ...names,
+          ...(competition.hostName || competition.host?.name ? { [competition.hostId]: competition.hostName || competition.host.name } : {}),
+          ...(competition.controllerName || competition.controller?.name ? { [competition.controllerId]: competition.controllerName || competition.controller.name } : {}),
+        }), current));
         setSchools(s.data);
         setSubjects(sub.data);
         setSponsors(sponsorResponse.data);
       })
       .catch((e) => setError(e.message));
   }
-  useEffect(load, []);
+  usePolling(load);
 
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!competitions || !schools || !subjects || !sponsors) return <LoadingState label="Loading competition setup..." />;
@@ -67,7 +73,7 @@ export default function CompetitionSetup() {
                 {c.startDate} – {c.endDate} · {c.schoolIds.length} schools · {c.subjectIds.length} subjects
               </p>
               <p style={{ fontSize: 13, marginTop: 4 }}>
-                Host: {c.hostId ? "Assigned" : "Unassigned"} · Controller: {c.controllerId ? "Assigned" : "Unassigned"}
+                Host: {c.hostId ? staffNames[c.hostId] || c.hostName || c.host?.name || "Assigned" : "Unassigned"} · Controller: {c.controllerId ? staffNames[c.controllerId] || c.controllerName || c.controller?.name || "Assigned" : "Unassigned"}
               </p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -115,8 +121,13 @@ export default function CompetitionSetup() {
         <AssignStaffModal
           competition={assignFor}
           onClose={() => setAssignFor(null)}
-          onSaved={() => {
+          onSaved={({ host, controller } = {}) => {
             setAssignFor(null);
+            setStaffNames((current) => ({
+              ...current,
+              ...(host?.id && host.name ? { [host.id]: host.name } : {}),
+              ...(controller?.id && controller.name ? { [controller.id]: controller.name } : {}),
+            }));
             load();
             showToast("Host/Controller assigned", "success");
           }}
@@ -134,6 +145,7 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
   const [includeInReport, setIncludeInReport] = useState(sponsor?.includeInReport !== false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
     setName(sponsor?.name || "");
@@ -162,12 +174,13 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
   }
 
   async function clearSponsor() {
-    if (!sponsor || !window.confirm("Remove this sponsor from the competition and report?")) return;
+    if (!sponsor) return;
     setBusy(true);
     try {
       await competitionsApi.update(competition.id, { sponsorId: null });
       await sponsorsApi.update(sponsor.id, { name: "", logoUrl: null, contactInfo: null, slogan: null, includeInReport: false });
       showToast("Sponsor removed", "success");
+      setConfirmClear(false);
       onSaved();
     } catch (e) {
       setError(e.message);
@@ -209,9 +222,10 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
             <input type="checkbox" checked={includeInReport} onChange={(e) => setIncludeInReport(e.target.checked)} />
             Include sponsor in report
           </label>
+          {confirmClear && <InlineConfirm title="Remove sponsor" message="Remove this sponsor from the competition and report?" onCancel={() => setConfirmClear(false)} onConfirm={clearSponsor} />}
           {error && <span className="field-error">{error}</span>}
           <div style={{ display: "flex", gap: 10 }}>
-            {sponsor && <button type="button" className="btn btn-danger" onClick={clearSponsor} disabled={busy} aria-label="Clear or remove sponsor" title="Clear or remove sponsor"><i className="fas fa-trash" aria-hidden="true" /></button>}
+            {sponsor && <button type="button" className="btn btn-danger" onClick={() => setConfirmClear(true)} disabled={busy} aria-label="Clear or remove sponsor" title="Clear or remove sponsor"><i className="fas fa-trash" aria-hidden="true" /></button>}
             <button className="btn btn-primary" disabled={busy} aria-label="Save sponsor" title="Save sponsor"><i className="fas fa-check" aria-hidden="true" /></button>
           </div>
         </form>
@@ -395,13 +409,15 @@ function AssignStaffModal({ competition, onClose, onSaved }) {
     setError("");
     setBusy(true);
     try {
+      let host;
+      let controller;
       if (hostName && hostUsername && hostPassword) {
-        await usersApi.assignHost(competition.id, { name: hostName, username: hostUsername, password: hostPassword });
+        host = await usersApi.assignHost(competition.id, { name: hostName, username: hostUsername, password: hostPassword });
       }
       if (controllerName && controllerUsername && controllerPassword) {
-        await usersApi.assignController(competition.id, { name: controllerName, username: controllerUsername, password: controllerPassword });
+        controller = await usersApi.assignController(competition.id, { name: controllerName, username: controllerUsername, password: controllerPassword });
       }
-      onSaved();
+      onSaved({ host, controller });
     } catch (e) {
       setError(e.message);
     } finally {

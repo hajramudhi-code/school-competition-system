@@ -1,4 +1,18 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+
+export function usePolling(callback, intervalMs = 5000, dependencies = []) {
+  const callbackRef = useRef(callback);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    callbackRef.current();
+    const intervalId = setInterval(() => callbackRef.current(), intervalMs);
+    return () => clearInterval(intervalId);
+  }, [intervalMs, ...dependencies]);
+}
 
 export function LoadingState({ label = "Loading..." }) {
   return (
@@ -163,6 +177,21 @@ export function Modal({ title, onClose, children, width = 480 }) {
   );
 }
 
+export function InlineConfirm({ title, message, onConfirm, onCancel }) {
+  return (
+    <div className="card-elevated" style={{ marginBottom: 14, padding: 14, borderLeft: "3px solid var(--danger)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+      <div>
+        <strong>{title}</strong>
+        <p style={{ marginTop: 4, fontSize: 13 }}>{message}</p>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+      </div>
+    </div>
+  );
+}
+
 // ---- Toast system ----
 const ToastContext = createContext(null);
 
@@ -184,7 +213,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div style={{ position: "fixed", bottom: 20, right: 20, display: "flex", flexDirection: "column", gap: 8, zIndex: 200 }}>
+      <div style={{ position: "fixed", top: 20, right: 20, display: "flex", flexDirection: "column", gap: 8, zIndex: 200 }}>
         {toasts.map((t) => (
           <div
             key={t.id}

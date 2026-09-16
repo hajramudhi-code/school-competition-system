@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { subjectsApi } from "../../api/subjectsApi";
-import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, useToast } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, InlineConfirm, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function Subjects() {
   const [subjects, setSubjects] = useState(null);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(null);
   const [viewSubject, setViewSubject] = useState(null);
+  const [deleteSubject, setDeleteSubject] = useState(null);
   const { showToast } = useToast();
 
   function load() {
@@ -16,7 +17,7 @@ export default function Subjects() {
       .then((res) => setSubjects(res.data))
       .catch((e) => setError(e.message));
   }
-  useEffect(load, []);
+  usePolling(load);
 
   async function toggleStatus(subject) {
     const next = subject.status === "ENABLED" ? "DISABLED" : "ENABLED";
@@ -30,10 +31,10 @@ export default function Subjects() {
   }
 
   async function removeSubject(subject) {
-    if (!window.confirm(`Delete ${subject.name}?`)) return;
     try {
       await subjectsApi.remove(subject.id);
       showToast("Subject deleted", "success");
+      setDeleteSubject(null);
       load();
     } catch (e) {
       showToast(e.message, "error");
@@ -56,6 +57,7 @@ export default function Subjects() {
         <EmptyState title="No subjects yet" description="Add a subject to start building your question bank." />
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {deleteSubject && <InlineConfirm title="Delete subject" message={`Are you sure you want to delete ${deleteSubject.name}?`} onCancel={() => setDeleteSubject(null)} onConfirm={() => removeSubject(deleteSubject)} />}
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: "left", background: "var(--bg-card-elevated)" }}>
@@ -73,12 +75,12 @@ export default function Subjects() {
                 <tr key={s.id} style={{ borderTop: "1px solid var(--border-color)" }}>
                   <td style={td}>{subjects.indexOf(s) + 1}</td>
                   <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1 }}>{s.name}</td>
-                  <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1, fontWeight: 700 }}>{s.code || "—"}</td>
+                  <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1, fontWeight: 700 }}>{getSubjectCode(s)}</td>
                   <td style={td}>
                     <StatusBadge status={s.status} />
                   </td>
                   <td style={td}>{formatDate(s.createdAt)}</td>
-                  <td style={td}>{formatDate(s.updatedAt)}</td>
+                  <td style={td}>{formatDate(s.updatedAt || s.createdAt)}</td>
                   <td style={{ ...td, textAlign: "right" }}>
                     <button className="btn btn-ghost" onClick={() => setViewSubject(s)}>
                       View
@@ -89,7 +91,7 @@ export default function Subjects() {
                     <button className="btn btn-ghost" onClick={() => toggleStatus(s)}>
                       {s.status === "ENABLED" ? "Disable" : "Enable"}
                     </button>
-                    <button className="btn btn-ghost" onClick={() => removeSubject(s)}>
+                    <button className="btn btn-ghost" onClick={() => setDeleteSubject(s)}>
                       Delete
                     </button>
                   </td>
@@ -120,10 +122,10 @@ function SubjectViewModal({ subject, onClose }) {
     <Modal title="Subject Details" onClose={onClose}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Row label="Name" value={subject.name} />
-        <Row label="Code" value={subject.code || "-"} />
+        <Row label="Code" value={getSubjectCode(subject)} />
         <Row label="Status" value={subject.status} />
         <Row label="Registered" value={formatDate(subject.createdAt)} />
-        <Row label="Updated" value={formatDate(subject.updatedAt)} />
+        <Row label="Updated" value={formatDate(subject.updatedAt || subject.createdAt)} />
         <button className="btn btn-secondary" onClick={onClose}>Close</button>
       </div>
     </Modal>
@@ -178,4 +180,5 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
 const th = { padding: "12px 16px", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 };
 const td = { padding: "12px 16px" };
 const formatDate = (value) => value ? new Date(value).toLocaleDateString() : "-";
+const getSubjectCode = (subject) => subject.code || subject.subjectCode || subject.name.trim().split(/\s+/).map((word) => word[0]).join("").slice(0, 6).toUpperCase() || "-";
 const Row = ({ label, value }) => <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "var(--text-muted)" }}>{label}</span><strong>{value}</strong></div>;

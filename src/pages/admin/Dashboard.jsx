@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { dashboardApi } from "../../api/competitionsApi";
-import { LoadingState, ErrorState, StatusBadge } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, StatusBadge, usePolling } from "../../components/common/index.jsx";
 
 const STAT_CARDS = [
   ["Total Schools", "totalSchools"],
@@ -24,7 +24,7 @@ export default function Dashboard() {
       .then(setData)
       .catch((e) => setError(e.message));
   }
-  useEffect(load, []);
+  usePolling(load);
 
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return <LoadingState label="Loading dashboard..." />;

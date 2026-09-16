@@ -77,9 +77,6 @@ export default function ControllerPage() {
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
 
-  if (error) return <ErrorState message={error} onRetry={loadAssignment} />;
-  if (!state || !subjects) return <LoadingState label="Loading public display..." />;
-
   return (
     <div
       className={`controller-page ${controllerMode === "NORMAL" ? "controller-normal-page" : ""}`}
@@ -96,9 +93,9 @@ export default function ControllerPage() {
           borderBottom: "1px solid var(--border-color)",
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: 15 }}>{state.matchName}</div>
+        <div style={{ fontWeight: 700, fontSize: 15 }}>{state?.matchName || "Controller Display"}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button className="btn btn-secondary" onClick={toggleMode}>
+          <button className="btn btn-secondary" disabled={!matchId} onClick={toggleMode}>
             MODE: {controllerMode}
           </button>
           <button className="btn btn-ghost" onClick={logout} style={{ fontSize: 13 }}>
@@ -108,16 +105,17 @@ export default function ControllerPage() {
       </header>
 
       <div style={{ padding: "36px 24px", display: "flex", flexDirection: "column", gap: 36, alignItems: "center", flex: 1 }}>
-        <ScoreBoard schoolA={state.schoolA} schoolB={state.schoolB} currentSchoolId={state.currentSchoolId} size="large" />
-        <SubjectCarousel subjects={subjects} selectedSubjectId={state.currentSubjectId} />
-        {controllerMode === "NORMAL" && (
-          <QuestionNumberRow slots={state.questionSlots} selectedQuestionId={state.currentQuestion?.id} />
-        )}
-
-        {controllerMode === "NORMAL" ? (
-          <ControllerNormalMode currentQuestion={state.currentQuestion} timer={state.timer} />
-        ) : (
-          <ControllerVideoMode videoQuestion={state.videoQuestion} videoQuestions={state.videoQuestions} timer={state.timer} />
+        {error ? <ErrorState message={error} onRetry={loadAssignment} /> : !state || !subjects ? <LoadingState label="Loading public display..." /> : (
+          <>
+            <ScoreBoard schoolA={state.schoolA} schoolB={state.schoolB} currentSchoolId={state.currentSchoolId} size="large" />
+            <SubjectCarousel subjects={subjects} selectedSubjectId={state.currentSubjectId} />
+            {controllerMode === "NORMAL" && <QuestionNumberRow slots={state.questionSlots} selectedQuestionId={state.currentQuestion?.id} />}
+            {controllerMode === "NORMAL" ? (
+              <ControllerNormalMode currentQuestion={state.currentQuestion} timer={state.timer} />
+            ) : (
+              <ControllerVideoMode videoQuestion={state.videoQuestion} videoQuestions={state.videoQuestions} timer={state.timer} />
+            )}
+          </>
         )}
       </div>
       <button className="controller-fullscreen" onClick={toggleFullscreen}>

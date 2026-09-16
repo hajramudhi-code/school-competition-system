@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { questionsApi, templatesApi } from "../../api/questionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
-import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, useToast } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function QuestionBank() {
   const [subjects, setSubjects] = useState(null);
   const [questions, setQuestions] = useState(null);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [hasTotal, setHasTotal] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const [error, setError] = useState(null);
   const [filterSubject, setFilterSubject] = useState("");
   const [showManualForm, setShowManualForm] = useState(false);
@@ -15,14 +19,18 @@ export default function QuestionBank() {
 
   function load() {
     setError(null);
-    Promise.all([subjectsApi.list({}), questionsApi.list(filterSubject ? { subjectId: filterSubject } : {})])
+    const questionParams = { page, pageSize, ...(filterSubject ? { subjectId: filterSubject } : {}) };
+    Promise.all([subjectsApi.list({}), questionsApi.list(questionParams)])
       .then(([s, q]) => {
         setSubjects(s.data);
         setQuestions(q.data);
+        const total = q.total ?? q.pagination?.total ?? q.meta?.total;
+        setHasTotal(Number.isFinite(total));
+        setTotalQuestions(total ?? q.data.length);
       })
       .catch((e) => setError(e.message));
   }
-  useEffect(load, [filterSubject]);
+  usePolling(load, 5000, [filterSubject, page]);
 
   async function removeQuestion(id) {
     try {
@@ -40,7 +48,7 @@ export default function QuestionBank() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <select className="input" style={{ width: 220 }} value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
+        <select className="input" style={{ width: 220 }} value={filterSubject} onChange={(e) => { setFilterSubject(e.target.value); setPage(1); }}>
           <option value="">All subjects</option>
           {subjects.map((s) => (
             <option key={s.id} value={s.id}>
@@ -68,6 +76,7 @@ export default function QuestionBank() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: "left", background: "var(--bg-card-elevated)" }}>
+                <th style={th}>#</th>
                 <th style={th}>Question</th>
                 <th style={th}>Subject</th>
                 <th style={th}>Mode</th>
@@ -78,8 +87,9 @@ export default function QuestionBank() {
               </tr>
             </thead>
             <tbody>
-              {questions.map((q) => (
+              {questions.map((q, index) => (
                 <tr key={q.id} style={{ borderTop: "1px solid var(--border-color)" }}>
+                  <td style={td}>{(page - 1) * pageSize + index + 1}</td>
                   <td style={{ ...td, maxWidth: 320 }}>{q.text}</td>
                   <td style={td}>{subjects.find((s) => s.id === q.subjectId)?.name}</td>
                   <td style={td}>{q.mode.replace("_", " ")}</td>
@@ -97,6 +107,23 @@ export default function QuestionBank() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {questions.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, gap: 12 }}>
+          <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+            Showing {(page - 1) * pageSize + 1}-{(page - 1) * pageSize + questions.length} of {hasTotal ? totalQuestions : `${totalQuestions}+`} questions
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-secondary" disabled={page === 1} onClick={() => setPage((current) => current - 1)}>
+              Previous
+            </button>
+            <span style={{ display: "inline-flex", alignItems: "center", padding: "0 8px", fontSize: 13 }}>Page {page}</span>
+            <button className="btn btn-secondary" disabled={questions.length < pageSize || (hasTotal && page * pageSize >= totalQuestions)} onClick={() => setPage((current) => current + 1)}>
+              Next
+            </button>
+          </div>
         </div>
       )}
 

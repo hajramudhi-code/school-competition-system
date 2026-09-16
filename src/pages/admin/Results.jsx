@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { competitionsApi } from "../../api/competitionsApi";
-import { LoadingState, ErrorState, EmptyState } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, EmptyState, usePolling } from "../../components/common/index.jsx";
 
 export default function Results() {
   const [competitions, setCompetitions] = useState(null);
@@ -18,14 +18,13 @@ export default function Results() {
       .catch((e) => setError(e.message));
   }, []);
 
-  useEffect(() => {
+  usePolling(() => {
     if (!selectedId) return;
-    setResults(undefined);
     competitionsApi
       .listResults(selectedId, {})
       .then((res) => setResults(Array.isArray(res.data) ? res.data : res.data?.data || []))
       .catch((e) => setError(e.message));
-  }, [selectedId]);
+  }, 5000, [selectedId]);
 
   if (error) return <ErrorState message={error} />;
   if (!competitions) return <LoadingState label="Loading results..." />;

@@ -1024,6 +1024,7 @@ input, select, textarea {
 .matches-round-heading p { font-size: 12px; color: var(--text-muted); }
 .matches-round-list { display: flex; flex-direction: column; gap: 10px; }
 .matches-round-row { display: grid; grid-template-columns: 34px minmax(150px, 1fr) 100px 170px 170px auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(24, 40, 68, .45); }
+.matches-date-input::-webkit-calendar-picker-indicator { filter: invert(89%) sepia(23%) saturate(650%) hue-rotate(4deg) brightness(104%) contrast(94%); cursor: pointer; }
 .matches-round-number { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; background: var(--blue-primary); font-size: 12px; font-weight: 800; }
 .matches-remove-round { padding: 8px 10px; font-size: 12px; }
 .matches-generate-button { align-self: flex-start; min-width: 210px; }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { competitionsApi } from "../../api/competitionsApi";
 import { matchesApi } from "../../api/matchesApi";
 import { schoolsApi } from "../../api/schoolsApi";
-import { LoadingState, ErrorState, EmptyState, Modal } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, EmptyState, Modal, usePolling } from "../../components/common/index.jsx";
 import FixtureBracket from "../../components/competition/FixtureBracket";
 
 export default function MatchesFixtures() {
@@ -26,8 +26,6 @@ export default function MatchesFixtures() {
 
   function loadFixture(competitionId) {
     if (!competitionId) return;
-    setFixture(undefined);
-    setMatches(undefined);
     setError(null);
     Promise.all([
       competitionsApi.getFixture(competitionId).catch((e) => (e.status === 404 ? null : Promise.reject(e))),
@@ -39,7 +37,7 @@ export default function MatchesFixtures() {
       })
       .catch((e) => setError(e.message));
   }
-  useEffect(() => loadFixture(selectedId), [selectedId]);
+  usePolling(() => loadFixture(selectedId), 5000, [selectedId]);
 
   function resolveSchoolName(id) {
     if (!id) return null;

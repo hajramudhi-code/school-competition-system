@@ -1,45 +1,66 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { competitionsApi } from "../../api/competitionsApi";
 import { schoolsApi } from "../../api/schoolsApi";
-import { LoadingState, ErrorState, EmptyState, useToast } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, EmptyState, usePolling, useToast } from "../../components/common/index.jsx";
 
 const ROUND_OPTIONS = ["Round of 16", "Round of 8", "Quarterfinals", "Semifinals", "Final"];
-const DEFAULT_ROUNDS = [
-  { name: "Round of 8", matchCount: 4, date: "", day: "" },
-  { name: "Semifinals", matchCount: 2, date: "", day: "" },
-  { name: "Final", matchCount: 1, date: "", day: "" },
-];
-
 export default function Matches() {
   const [competitions, setCompetitions] = useState(null);
   const [schools, setSchools] = useState(null);
   const [selectedId, setSelectedId] = useState("");
-  const [rounds, setRounds] = useState(DEFAULT_ROUNDS);
+  const [rounds, setRounds] = useState([]);
   const [generated, setGenerated] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const { showToast } = useToast();
 
-  useEffect(() => {
+  function loadCompetitions() {
     Promise.all([competitionsApi.list({}), schoolsApi.list({})])
       .then(async ([res, schoolResponse]) => {
         const details = await Promise.all(res.data.map((competition) => competitionsApi.get(competition.id)));
         setCompetitions(details);
         setSchools(schoolResponse.data);
-        if (details[0]) setSelectedId(details[0].id);
+        if (details.length && !details.some((competition) => competition.id === selectedId)) setSelectedId(details[0].id);
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }
+  usePolling(loadCompetitions);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    setRounds([]);
+    setGenerated(null);
+    competitionsApi.getFixture(selectedId)
+      .then((fixture) => {
+        setGenerated(fixture);
+        setRounds(fixture.rounds?.map((round) => ({
+          name: round.roundName,
+          matchCount: round.matches.length,
+          date: round.matches[0]?.date || "",
+          day: round.matches[0]?.day || getDayName(round.matches[0]?.date),
+        })) || []);
+      })
+      .catch((e) => {
+        if (e.status !== 404) setError(e.message);
+      });
+  }, [selectedId]);
 
   const competition = useMemo(() => competitions?.find((item) => item.id === selectedId), [competitions, selectedId]);
   const schoolCount = competition?.schoolIds?.length || 0;
 
   function updateRound(index, field, value) {
-    setRounds((current) => current.map((round, roundIndex) => roundIndex === index ? { ...round, [field]: value } : round));
+    setRounds((current) => current.map((round, roundIndex) => {
+      if (roundIndex !== index) return round;
+      return field === "date" ? { ...round, date: value, day: getDayName(value) } : { ...round, [field]: value };
+    }));
   }
 
   function addRound() {
-    setRounds((current) => [...current, { name: "Quarterfinals", matchCount: 1, date: "", day: "" }]);
+    setRounds((current) => {
+      const previousDate = current[current.length - 1]?.date;
+      const date = previousDate ? addDays(previousDate, 1) : competition?.startDate || "";
+      return [...current, { name: "Quarterfinals", matchCount: 1, date, day: getDayName(date) }];
+    });
   }
 
   function removeRound(index) {
@@ -88,7 +109,7 @@ export default function Matches() {
         <div className="matches-settings-topline">
           <div>
             <label className="field-label">Competition</label>
-            <select className="input" value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setGenerated(null); }}>
+            <select className="input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
               {competitions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </div>
@@ -111,7 +132,7 @@ export default function Matches() {
                 {ROUND_OPTIONS.map((option) => <option key={option}>{option}</option>)}
               </select>
               <input className="input" type="number" min="1" max="4" value={round.matchCount} onChange={(e) => updateRound(index, "matchCount", e.target.value)} aria-label={`Matches in round ${index + 1}`} />
-              <input className="input" type="date" value={round.date} min={competition?.startDate} max={competition?.endDate} onChange={(e) => updateRound(index, "date", e.target.value)} aria-label={`Date for round ${index + 1}`} />
+              <input className="input matches-date-input" type="date" value={round.date} min={competition?.startDate} max={competition?.endDate} onChange={(e) => updateRound(index, "date", e.target.value)} aria-label={`Date for round ${index + 1}`} />
               <input className="input" placeholder="Day e.g. MONDAY" value={round.day} onChange={(e) => updateRound(index, "day", e.target.value.toUpperCase())} aria-label={`Day for round ${index + 1}`} />
               <button type="button" className="btn btn-ghost matches-remove-round" onClick={() => removeRound(index)} disabled={rounds.length === 1}>Remove</button>
             </div>
@@ -145,4 +166,15 @@ export default function Matches() {
       )}
     </div>
   );
+}
+
+function getDayName(date) {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date(`${date}T00:00:00`)).toUpperCase();
+}
+
+function addDays(date, amount) {
+  const next = new Date(`${date}T00:00:00`);
+  next.setDate(next.getDate() + amount);
+  return next.toISOString().slice(0, 10);
 }

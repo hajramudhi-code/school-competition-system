@@ -84,9 +84,6 @@ export default function HostPage() {
     }
   }
 
-  if (error) return <ErrorState message={error} onRetry={loadAssignment} />;
-  if (!state || !subjects) return <LoadingState label="Loading match control..." />;
-
   return (
     <div className="host-page">
       <header
@@ -101,17 +98,18 @@ export default function HostPage() {
         }}
       >
         <div className="host-match-meta">
-          <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.03em" }}>{state.matchName}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.03em" }}>{state?.matchName || "Host Control"}</div>
           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            {state.date} | {state.day}
+            {state ? `${state.date} | ${state.day}` : "Waiting for match data"}
           </div>
         </div>
         <div className="host-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             className="btn btn-secondary"
+            disabled={!matchId || !state}
             onClick={() => guarded(() => hostApi.setMode(matchId, state.questionMode === "NORMAL" ? "VIDEO" : "NORMAL"))}
           >
-            MODE: {state.questionMode}
+            MODE: {state?.questionMode || "NORMAL"}
           </button>
           <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{user.name}</span>
           <button className="btn btn-ghost" onClick={logout}>
@@ -121,50 +119,49 @@ export default function HostPage() {
       </header>
 
       <div className="host-content" style={{ padding: "24px 24px 40px", maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div className="card host-score-card">
-          <ScoreBoard
-            schoolA={state.schoolA}
-            schoolB={state.schoolB}
-            currentSchoolId={state.currentSchoolId}
-            questionsAnsweredInTurn={state.questionsAnsweredInTurn}
-            questionMode={state.questionMode}
-            onSelectSchool={(schoolId) => guarded(() => hostApi.selectSchool(matchId, schoolId))}
-          />
-        </div>
+        {error ? <ErrorState message={error} onRetry={loadAssignment} /> : !state || !subjects ? <LoadingState label="Loading match control..." /> : (
+          <>
+            <div className="card host-score-card">
+              <ScoreBoard
+                schoolA={state.schoolA}
+                schoolB={state.schoolB}
+                currentSchoolId={state.currentSchoolId}
+                questionsAnsweredInTurn={state.questionsAnsweredInTurn}
+                questionMode={state.questionMode}
+                onSelectSchool={(schoolId) => guarded(() => hostApi.selectSchool(matchId, schoolId))}
+              />
+            </div>
 
-        <div className="host-main-area" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {state.questionMode === "NORMAL" ? (
-              <HostNormalMode
-                subjects={subjects}
-                currentSubjectId={state.currentSubjectId}
-                onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
-                questionSlots={state.questionSlots}
-                onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
-                currentQuestion={state.currentQuestion}
-                onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.currentQuestion.id, result))}
-                busy={busy}
-              />
-            ) : (
-              <HostVideoMode
-                subjects={subjects}
-                currentSubjectId={state.currentSubjectId}
-                onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
-                videoQuestions={videoQuestions}
-                onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
-                currentVideoQuestion={state.videoQuestion}
-                onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.videoQuestion.id, result))}
-                busy={busy}
-                timer={state.timer}
-              />
-            )}
+            <div className="host-main-area" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {state.questionMode === "NORMAL" ? (
+                <HostNormalMode
+                  subjects={subjects}
+                  currentSubjectId={state.currentSubjectId}
+                  onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
+                  questionSlots={state.questionSlots}
+                  onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
+                  currentQuestion={state.currentQuestion}
+                  onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.currentQuestion.id, result))}
+                  busy={busy}
+                />
+              ) : (
+                <HostVideoMode
+                  subjects={subjects}
+                  currentSubjectId={state.currentSubjectId}
+                  onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
+                  videoQuestions={videoQuestions}
+                  onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
+                  currentVideoQuestion={state.videoQuestion}
+                  onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.videoQuestion.id, result))}
+                  busy={busy}
+                  timer={state.timer}
+                />
+              )}
 
-            {state.currentQuestion && (
-              <HostControls
-                timer={state.timer}
-                disabled={busy}
-              />
-            )}
-        </div>
+              {state.currentQuestion && <HostControls timer={state.timer} disabled={busy} />}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

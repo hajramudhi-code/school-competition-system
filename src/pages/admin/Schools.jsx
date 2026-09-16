@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { schoolsApi } from "../../api/schoolsApi";
-import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, LogoUpload, useToast } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, LogoUpload, InlineConfirm, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function Schools() {
   const [schools, setSchools] = useState(null);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(null); // null | {} | school
   const [viewSchool, setViewSchool] = useState(null);
+  const [deleteSchool, setDeleteSchool] = useState(null);
   const { showToast } = useToast();
 
   function load() {
@@ -16,7 +17,7 @@ export default function Schools() {
       .then((res) => setSchools(res.data))
       .catch((e) => setError(e.message));
   }
-  useEffect(load, []);
+  usePolling(load);
 
   async function toggleStatus(school) {
     const next = school.status === "ENABLED" ? "DISABLED" : "ENABLED";
@@ -30,10 +31,10 @@ export default function Schools() {
   }
 
   async function removeSchool(school) {
-    if (!window.confirm(`Delete ${school.name}?`)) return;
     try {
       await schoolsApi.remove(school.id);
       showToast("School deleted", "success");
+      setDeleteSchool(null);
       load();
     } catch (e) {
       showToast(e.message, "error");
@@ -56,6 +57,7 @@ export default function Schools() {
         <EmptyState title="No schools yet" description="Add your first school to start building competitions." />
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {deleteSchool && <InlineConfirm title="Delete school" message={`Are you sure you want to delete ${deleteSchool.name}?`} onCancel={() => setDeleteSchool(null)} onConfirm={() => removeSchool(deleteSchool)} />}
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: "left", background: "var(--bg-card-elevated)" }}>
@@ -92,7 +94,7 @@ export default function Schools() {
                     <button className="btn btn-ghost" onClick={() => toggleStatus(s)}>
                       {s.status === "ENABLED" ? "Disable" : "Enable"}
                     </button>
-                    <button className="btn btn-ghost" onClick={() => removeSchool(s)}>
+                    <button className="btn btn-ghost" onClick={() => setDeleteSchool(s)}>
                       Delete
                     </button>
                   </td>
