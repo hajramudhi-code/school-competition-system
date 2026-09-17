@@ -65,28 +65,50 @@ export default function CompetitionSetup() {
             </button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {competitions.map((c) => (
-          <div key={c.id} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h3 style={{ marginBottom: 6 }}>{c.name}</h3>
-              <p style={{ fontSize: 13 }}>
-                {c.startDate} – {c.endDate} · {c.schoolIds.length} schools · {c.subjectIds.length} subjects
-              </p>
-              <p style={{ fontSize: 13, marginTop: 4 }}>
-                Host: {c.hostId ? staffNames[c.hostId] || getStaffName(c, "host") || c.hostId : "Unassigned"} · Controller: {c.controllerId ? staffNames[c.controllerId] || getStaffName(c, "controller") || c.controllerId : "Unassigned"}
-              </p>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <StatusBadge status={c.status} />
-              <button className="btn btn-secondary" onClick={() => setEditFor(c)}>
-                Edit
-              </button>
-              <button className="btn btn-secondary" onClick={() => setAssignFor(c)}>
-                Assign Host/Controller
-              </button>
-            </div>
-          </div>
-        ))}
+            {competitions.map((c) => (
+              <div key={c.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <div>
+                    <h3 style={{ marginBottom: 6 }}>{c.name}</h3>
+                    <p style={{ fontSize: 13, margin: 0 }}>
+                      {c.startDate} – {c.endDate}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <StatusBadge status={c.status} />
+                    <button className="btn btn-secondary" onClick={() => setEditFor(c)}>
+                      Edit
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => setAssignFor(c)}>
+                      Assign Host/Controller
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, fontSize: 13 }}>
+                  <div>
+                    <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>Host</div>
+                    <div>{c.hostId ? staffNames[c.hostId] || getStaffName(c, "host") || c.hostId : "Unassigned"}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>Controller</div>
+                    <div>{c.controllerId ? staffNames[c.controllerId] || getStaffName(c, "controller") || c.controllerId : "Unassigned"}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>Schools</div>
+                    <div>{c.schoolIds.length}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>Subjects</div>
+                    <div>{c.subjectIds.length}</div>
+                  </div>
+                </div>
+
+                <div style={{ paddingTop: 4 }}>
+                  <SummaryPanel competition={c} schools={schools} subjects={subjects} />
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
@@ -150,6 +172,55 @@ function getStaffResponseName(staff) {
 
 function getStaffResponseId(staff, role) {
   return staff?.id || staff?.staffId || staff?.user?.id || `${role}-assigned`;
+}
+
+function SummaryPanel({ competition, schools, subjects }) {
+  const schoolIds = new Set(competition?.schoolIds || []);
+  const subjectIds = new Set(competition?.subjectIds || []);
+  const participatingSchools = schools.filter((school) => schoolIds.has(school.id)).map((school) => school.name);
+  const competitionSubjects = subjects.filter((subject) => subjectIds.has(subject.id)).map((subject) => subject.name);
+
+  return (
+    <div className="card" style={{ padding: "14px 18px 18px", background: "var(--bg-card)" }}>
+      <h4 style={{ margin: "0 0 14px", color: "var(--text-muted)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        Summary
+      </h4>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
+        <div>
+          <h5 style={{ margin: "0 0 8px", fontSize: 14 }}>Participating Schools</h5>
+          {participatingSchools.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", margin: 0 }}>No schools assigned to this competition.</p>
+          ) : (
+            <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {participatingSchools.map((name, index) => (
+                <li key={`${name}-${index}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                  <span style={{ minWidth: 28, color: "var(--text-muted)", fontWeight: 700 }}>{index + 1}.</span>
+                  <span>{name}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div>
+          <h5 style={{ margin: "0 0 8px", fontSize: 14 }}>Subjects in Use</h5>
+          {competitionSubjects.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", margin: 0 }}>No subjects assigned to this competition.</p>
+          ) : (
+            <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {competitionSubjects.map((name, index) => (
+                <li key={`${name}-${index}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                  <span style={{ minWidth: 28, color: "var(--text-muted)", fontWeight: 700 }}>{index + 1}.</span>
+                  <span>{name}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
