@@ -3,9 +3,17 @@ export function getSubjectCode(subject) {
 }
 
 export function getQuestionSlots(state) {
-  const slots = state?.questionSlots || state?.question_slots || state?.questions || [];
+  const liveState = state?.data && !Array.isArray(state.data) ? state.data : state?.liveState || state;
+  const slots = liveState?.questionSlots
+    || liveState?.question_slots
+    || liveState?.questions
+    || liveState?.currentSubject?.questionSlots
+    || liveState?.currentSubject?.question_slots
+    || liveState?.currentSubject?.questions
+    || [];
+  if (!Array.isArray(slots)) return [];
   return slots.map((item, index) => ({
-    questionId: item.questionId || item.question_id || item.id,
+    questionId: item.questionId || item.question_id || item.question?.id || item.id,
     slot: item.slot || item.questionNumber || item.question_number || index + 1,
     status: item.status || item.slotStatus || item.slot_status || "AVAILABLE",
   })).filter((item) => item.questionId);

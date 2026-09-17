@@ -113,7 +113,7 @@ export default function HostPage() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 250);
+    const id = setInterval(refresh, 1000);
     return () => clearInterval(id);
   }, [refresh]);
 

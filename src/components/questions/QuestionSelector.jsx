@@ -11,8 +11,9 @@ export default function QuestionSelector({ slots = [], onSelect, columns = 10 })
   return (
     <div className="card question-selector">
       <h4 style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.05em", marginBottom: 12 }}>SELECT QUESTION</h4>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 8 }}>
-        {slots.map((slot) => {
+      {slots.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 8 }}>
+          {slots.map((slot) => {
           const style = STATE_STYLES[slot.status] || STATE_STYLES.AVAILABLE;
           const disabled = slot.status !== "AVAILABLE";
           return (
@@ -27,8 +28,11 @@ export default function QuestionSelector({ slots = [], onSelect, columns = 10 })
               {String(slot.slot).padStart(2, "0")}
             </button>
           );
-        })}
-      </div>
+          })}
+        </div>
+      ) : (
+        <p className="question-selector-empty">No questions available for this subject.</p>
+      )}
       <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 12, color: "var(--text-muted)" }}>
         <LegendDot color="var(--bg-card-elevated)" label="Available" />
         <LegendDot color="var(--blue-primary)" label="Selected" />

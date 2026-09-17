@@ -448,6 +448,16 @@ input, select, textarea {
   order: 1;
 }
 
+.question-selector-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 .host-empty-question {
   min-height: 120px;
   display: grid;
