@@ -9,8 +9,7 @@ import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
 import HostControls from "../../components/host/HostControls";
-import { getQuestionSlots, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
-import { useLiveCountdown } from "../../components/common/useLiveCountdown";
+import { getQuestionSlots, MAX_VISIBLE_VIDEO_QUESTIONS, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
 
 export default function HostPage() {
   const { user, logout } = useAuth();
@@ -21,31 +20,21 @@ export default function HostPage() {
   const [state, setState] = useState(null);
   const [subjects, setSubjects] = useState(null);
   const [videoQuestions, setVideoQuestions] = useState([]);
-  const [matchDurationMinutes, setMatchDurationMinutes] = useState(30);
-  const [matchTimer, setMatchTimer] = useState(null);
-  const [matchTimerBusy, setMatchTimerBusy] = useState(false);
+  const [matchStarted, setMatchStarted] = useState(false);
+  const [matchEnded, setMatchEnded] = useState(false);
+  const [matchControlBusy, setMatchControlBusy] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const timeoutFiredRef = useRef(false);
   const latestMutationRef = useRef(0);
   const dismissedQuestionRef = useRef(null);
 
-  const closeQuestionView = useCallback((result, questionId, serverState = null) => {
+  const closeQuestionView = useCallback((questionId) => {
     setState((current) => {
-      const base = serverState ?? current;
-      if (!base) return base;
-      return {
-        ...base,
-        currentQuestion: null,
-        videoQuestion: null,
-        lastResult: {
-          questionId,
-          result,
-          schoolId: base.currentSchoolId ?? current?.currentSchoolId,
-          timestamp: new Date().toISOString(),
-        },
-      };
+      if (!current) return current;
+      return { ...current, currentQuestion: null, videoQuestion: null };
     });
+    dismissedQuestionRef.current = questionId;
   }, []);
 
   const refresh = useCallback(() => {
@@ -55,13 +44,10 @@ export default function HostPage() {
       .getLiveState(matchId)
       .then((nextState) => {
         if (requestStartedAt < latestMutationRef.current) return;
-        const revealedQuestionId = nextState?.lastResult?.questionId;
         const activeQuestionId = nextState?.currentQuestion?.id || nextState?.videoQuestion?.id;
         const shouldHideDismissedQuestion = dismissedQuestionRef.current
-          && revealedQuestionId === dismissedQuestionRef.current
           && activeQuestionId === dismissedQuestionRef.current;
         setState(shouldHideDismissedQuestion ? { ...nextState, currentQuestion: null, videoQuestion: null } : nextState);
-        if (nextState?.matchTimer) setMatchTimer(nextState.matchTimer);
       })
       .catch((e) => setError(e.message));
   }, [matchId]);
@@ -72,26 +58,19 @@ export default function HostPage() {
     if (!matchId || !questionId) return;
 
     latestMutationRef.current = Date.now();
-    const isTimeout = result === "TIMEOUT";
-    if (isTimeout) {
-      dismissedQuestionRef.current = questionId;
-      closeQuestionView(result, questionId, state);
-    }
     setBusy(true);
     try {
       const nextState = await hostApi.recordResult(matchId, questionId, result);
-      dismissedQuestionRef.current = questionId;
-      closeQuestionView(result, questionId, nextState ?? state);
+      setState(nextState ?? state);
       if (!nextState) {
         refresh();
       }
     } catch (e) {
-      if (isTimeout) refresh();
       showToast(e.message, "error");
     } finally {
       setBusy(false);
     }
-  }, [closeQuestionView, matchId, refresh, showToast, state, state?.currentQuestion, state?.questionMode, state?.videoQuestion]);
+  }, [matchId, refresh, showToast, state, state?.currentQuestion, state?.questionMode, state?.videoQuestion]);
 
   const loadAssignment = useCallback(async () => {
     setError(null);
@@ -107,7 +86,6 @@ export default function HostPage() {
       ]);
 
       const subjectList = Array.isArray(subjectResponse?.data) ? subjectResponse.data : [];
-      setMatchDurationMinutes(Number(competition?.matchDurationMinutes) || 30);
       const selectedSubjectIds = new Set(competition?.subjectIds || []);
       setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
 
@@ -117,16 +95,17 @@ export default function HostPage() {
         match = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data[0] : null;
       }
       if (!match) {
+        const completedResponse = await matchesApi.list({ competitionId: competitionId, status: "COMPLETED" });
+        match = Array.isArray(completedResponse?.data) ? completedResponse.data[0] : null;
+      }
+      if (!match) {
         setError("No match is currently assigned to this competition.");
         setMatchId(null);
         return;
       }
       setMatchId(match.id);
-      setMatchTimer((current) => current || {
-        state: "IDLE",
-        durationSeconds: (Number(competition?.matchDurationMinutes) || 30) * 60,
-        remainingSeconds: (Number(competition?.matchDurationMinutes) || 30) * 60,
-      });
+      setMatchStarted(match.status === "IN_PROGRESS");
+      setMatchEnded(match.status === "COMPLETED");
     } catch (e) {
       setError(e.message || "Unable to load host assignment.");
     }
@@ -144,7 +123,7 @@ export default function HostPage() {
 
   useEffect(() => {
     if (state?.questionMode === "VIDEO" && state?.currentSubjectId) {
-      hostApi.listVideoQuestions(matchId, state.currentSubjectId).then((res) => setVideoQuestions((res.data || []).slice(0, MAX_VISIBLE_QUESTION_SLOTS)));
+      hostApi.listVideoQuestions(matchId, state.currentSubjectId).then((res) => setVideoQuestions((res.data || []).slice(0, MAX_VISIBLE_VIDEO_QUESTIONS)));
     }
   }, [matchId, state?.questionMode, state?.currentSubjectId]);
 
@@ -170,29 +149,67 @@ export default function HostPage() {
     }
   }
 
-  const toggleMatchTimer = useCallback(async () => {
-    if (!matchId || matchTimerBusy) return;
-    const action = matchTimer?.state === "RUNNING" ? "PAUSE" : "START";
-    const previousTimer = matchTimer;
-    const durationSeconds = (matchDurationMinutes || 30) * 60;
-    setMatchTimerBusy(true);
-    setMatchTimer((current) => ({
-      ...(current || {}),
-      state: action === "START" ? "RUNNING" : "PAUSED",
-      durationSeconds: current?.durationSeconds || durationSeconds,
-      remainingSeconds: current?.remainingSeconds ?? durationSeconds,
-    }));
+  const updateFromMatchResponse = useCallback((response, fallbackMatchId) => {
+    const liveState = response?.liveState || response?.state || response;
+    const nextMatchId = response?.matchId || liveState?.matchId || fallbackMatchId;
+    if (nextMatchId && nextMatchId !== matchId) setMatchId(nextMatchId);
+    if (liveState?.schoolA || liveState?.currentQuestion || liveState?.questionSlots) setState(liveState);
+    return { liveState, nextMatchId };
+  }, [matchId]);
+
+  const transitionToMatch = useCallback((response, fallbackMatchId) => {
+    const liveState = response?.liveState || response?.state || response;
+    const nextMatchId = response?.matchId || liveState?.matchId || fallbackMatchId;
+    if (nextMatchId && nextMatchId !== matchId) setMatchId(nextMatchId);
+    setState(liveState);
+    setMatchStarted(true);
+    setMatchEnded(false);
+    dismissedQuestionRef.current = null;
+    timeoutFiredRef.current = false;
+    return nextMatchId;
+  }, [matchId]);
+
+  const startMatch = useCallback(async () => {
+    if (!matchId || matchControlBusy) return;
+    setMatchControlBusy(true);
     try {
-      const response = await hostApi.matchTimer(matchId, action);
-      if (response?.matchTimer) setMatchTimer(response.matchTimer);
-      else if (response?.state && response?.remainingSeconds !== undefined) setMatchTimer(response);
+      const response = await hostApi.startMatch(matchId);
+      transitionToMatch(response, matchId);
     } catch (e) {
-      setMatchTimer(previousTimer);
       showToast(e.message, "error");
     } finally {
-      setMatchTimerBusy(false);
+      setMatchControlBusy(false);
     }
-  }, [matchDurationMinutes, matchId, matchTimer, matchTimerBusy, showToast]);
+  }, [matchControlBusy, matchId, showToast, transitionToMatch]);
+
+  const endMatch = useCallback(async () => {
+    if (!matchId || matchControlBusy || !matchStarted) return;
+    setMatchControlBusy(true);
+    try {
+      const response = await hostApi.endMatch(matchId);
+      updateFromMatchResponse(response, matchId);
+      setMatchStarted(false);
+      setMatchEnded(true);
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setMatchControlBusy(false);
+    }
+  }, [matchControlBusy, matchId, matchStarted, showToast, updateFromMatchResponse]);
+
+  const chooseNextMatch = useCallback(async (rematch) => {
+    if (!matchId || matchControlBusy) return;
+    if (rematch && !window.confirm("Start a rematch with the same schools?")) return;
+    setMatchControlBusy(true);
+    try {
+      const response = rematch ? await hostApi.rematch(matchId) : await hostApi.nextMatch(matchId);
+      transitionToMatch(response, matchId);
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setMatchControlBusy(false);
+    }
+  }, [matchControlBusy, matchId, showToast, transitionToMatch]);
 
   return (
     <div className="host-page">
@@ -214,14 +231,22 @@ export default function HostPage() {
             {state ? `${state.date} | ${state.day}` : "Waiting for match data"}
           </div>
         </div>
-        <MatchTimerControl timer={matchTimer} busy={matchTimerBusy} onToggle={toggleMatchTimer} />
+        <MatchControl
+          started={matchStarted}
+          ended={matchEnded}
+          busy={matchControlBusy}
+          onStart={startMatch}
+          onEnd={endMatch}
+          onRematch={() => chooseNextMatch(true)}
+          onNext={() => chooseNextMatch(false)}
+        />
         <div className="host-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             className="btn btn-secondary"
             disabled={!matchId || !state}
             onClick={() => guarded(() => hostApi.setMode(matchId, state.questionMode === "NORMAL" ? "VIDEO" : "NORMAL"))}
           >
-            MODE: {state?.questionMode || "NORMAL"}
+            {state?.questionMode === "VIDEO" ? "BONUS QN" : "NORMAL"}
           </button>
           <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{hostName}</span>
           <button className="btn btn-ghost" onClick={logout}>
@@ -257,7 +282,9 @@ export default function HostPage() {
                   }}
                   currentQuestion={state.currentQuestion}
                   onDecision={(result) => submitDecision(result)}
+                  onCloseQuestion={() => closeQuestionView(state.currentQuestion?.id)}
                   busy={busy}
+                  result={state.lastResult}
                 />
               ) : (
                 <HostVideoMode
@@ -271,12 +298,15 @@ export default function HostPage() {
                   }}
                   currentVideoQuestion={state.videoQuestion}
                   onDecision={(result) => submitDecision(result)}
+                  onCloseQuestion={() => closeQuestionView(state.videoQuestion?.id)}
                   busy={busy}
                   timer={state.timer}
+                  result={state.lastResult}
                 />
               )}
 
-              {(state.currentQuestion || state.videoQuestion) && (
+              {(state.currentQuestion || state.videoQuestion)
+                && state.lastResult?.questionId !== (state.currentQuestion?.id || state.videoQuestion?.id) && (
                 <HostControls timer={state.timer} disabled={busy} onExpire={() => submitDecision("TIMEOUT")} />
               )}
             </div>
@@ -287,16 +317,24 @@ export default function HostPage() {
   );
 }
 
-function MatchTimerControl({ timer, busy, onToggle }) {
-  const remaining = useLiveCountdown(timer);
-  const isRunning = timer?.state === "RUNNING";
-  const totalMinutes = Math.floor((timer?.durationSeconds || 0) / 60);
-  const minutes = Math.floor(remaining / 60);
-  const seconds = Math.ceil(remaining % 60).toString().padStart(2, "0");
+function MatchControl({ started, ended, busy, onStart, onEnd, onRematch, onNext }) {
+  if (ended) {
+    return (
+      <div className="host-match-control" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.04em" }}>MATCH COMPLETED</span>
+        <button className="btn btn-secondary" disabled={busy} onClick={onRematch}>
+          <i className="fas fa-rotate-right" aria-hidden="true" /> REMATCH
+        </button>
+        <button className="btn btn-primary" disabled={busy} onClick={onNext}>
+          <i className="fas fa-forward" aria-hidden="true" /> NEXT MATCH
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
-      className="host-match-timer"
+      className="host-match-control"
       style={{
         position: "absolute",
         left: "50%",
@@ -308,11 +346,11 @@ function MatchTimerControl({ timer, busy, onToggle }) {
       }}
     >
       <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
-        MATCH {totalMinutes ? `${minutes}:${seconds}` : "--:--"}
+        {ended ? "MATCH ENDED" : started ? "MATCH IN PROGRESS" : "MATCH NOT STARTED"}
       </span>
-      <button className={`btn ${isRunning ? "btn-secondary" : "btn-primary"}`} disabled={busy || !timer} onClick={onToggle}>
-        <i className={`fas ${isRunning ? "fa-pause" : "fa-play"}`} aria-hidden="true" />
-        {isRunning ? "PAUSE" : "START"}
+      <button className={`btn ${started ? "btn-danger" : "btn-primary"}`} disabled={busy} onClick={started ? onEnd : onStart}>
+        <i className={`fas ${started ? "fa-stop" : "fa-play"}`} aria-hidden="true" />
+        {started ? "END" : "START"}
       </button>
     </div>
   );

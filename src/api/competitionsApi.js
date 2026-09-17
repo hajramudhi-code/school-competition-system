@@ -27,6 +27,7 @@ export const sponsorsApi = {
   list: () => apiClient.get("/sponsors"),
   create: (data) => apiClient.post("/sponsors", data),
   update: (id, data) => apiClient.patch(`/sponsors/${id}`, data),
+  remove: (id) => apiClient.delete(`/sponsors/${id}`),
   createWithLogo: (formData) => apiClient.postForm("/sponsors", formData),
   updateWithLogo: (id, formData) => apiClient.patchForm(`/sponsors/${id}`, formData),
 };

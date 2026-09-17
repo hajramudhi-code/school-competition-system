@@ -17,6 +17,14 @@ function SchoolBlock({ school, active, currentSchoolId, big, align = "left", sid
   if (!school) return <div style={{ width: big ? 220 : 140 }} />;
   const turnLimit = questionMode === "VIDEO" ? 1 : 5;
   const locked = !active && currentSchoolId && questionsAnsweredInTurn < turnLimit;
+  if (big) {
+    return (
+      <div className={`controller-score-school controller-score-school-${side} ${active ? "is-active" : ""}`}>
+        <span className="controller-score-school-name">{school.name}</span>
+        <span className="controller-score-value">{String(school.score).padStart(3, "0")}</span>
+      </div>
+    );
+  }
   return (
     <div className={`host-school-block host-school-${side}`} style={{ textAlign: align === "right" ? "right" : "left", minWidth: big ? 220 : 140 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: align === "right" ? "flex-end" : "flex-start" }}>

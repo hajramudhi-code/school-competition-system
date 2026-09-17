@@ -1,9 +1,8 @@
 import React from "react";
 import QuestionSelector from "../questions/QuestionSelector";
 import QuestionPanel from "../questions/QuestionPanel";
-import { getSubjectCode } from "../../utils/liveState";
 
-export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, busy }) {
+export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, onCloseQuestion, busy, result }) {
   return (
     <div className="host-normal-layout">
       <div className="card host-subject-panel">
@@ -20,7 +19,7 @@ export default function HostNormalMode({ subjects, currentSubjectId, onSelectSub
                 className={`btn host-subject-button ${active ? "is-active" : ""}`}
                 style={{ background: active ? "var(--blue-primary)" : "var(--bg-card-elevated)", color: active ? "#fff" : disabled ? "var(--text-disabled)" : "var(--text-main)", border: "1px solid var(--border-color)", opacity: disabled ? 0.5 : 1 }}
               >
-                {getSubjectCode(s)}
+                {s.name}
               </button>
             );
           })}
@@ -28,8 +27,8 @@ export default function HostNormalMode({ subjects, currentSubjectId, onSelectSub
       </div>
 
       <div className="host-question-area">
-        {currentSubjectId ? <QuestionSelector slots={questionSlots} onSelect={onSelectQuestion} columns={10} /> : <div className="card host-empty-question">Select a subject to load its questions.</div>}
-        <QuestionPanel question={currentQuestion} onDecision={onDecision} busy={busy} />
+        {currentSubjectId ? <QuestionSelector slots={questionSlots} onSelect={onSelectQuestion} columns={5} /> : <div className="card host-empty-question">Select a subject to load its questions.</div>}
+        <QuestionPanel question={currentQuestion} onDecision={onDecision} onClose={onCloseQuestion} busy={busy} result={result} />
       </div>
     </div>
   );

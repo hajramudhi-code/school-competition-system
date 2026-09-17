@@ -202,7 +202,7 @@ export function ToastProvider({ children }) {
   const showToast = useCallback((message, tone = "info") => {
     const id = Math.random().toString(36).slice(2);
     setToasts((current) => current.some((toast) => toast.message === message && toast.tone === tone) ? current : [...current, { id, message, tone }]);
-    setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 10000);
+    setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 5000);
   }, []);
 
   useEffect(() => {

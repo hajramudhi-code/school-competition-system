@@ -1,12 +1,14 @@
 import React from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import AnswerOptions from "../questions/AnswerOptions";
-import { MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
+import ControllerResultNotice from "./ControllerResultNotice";
+import { MAX_VISIBLE_VIDEO_QUESTIONS } from "../../utils/liveState";
 import { useLiveCountdown } from "../common/useLiveCountdown";
 
-export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer }) {
+export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer, lastResult }) {
   const displayedQuestion = videoQuestion;
-  const toneClass = "";
+  const isResultVisible = lastResult?.questionId === displayedQuestion?.id;
+  const toneClass = isResultVisible && lastResult.result === "CORRECT" ? "has-result-correct" : isResultVisible ? "has-result-incorrect" : "";
 
   return (
     <div className={displayedQuestion ? "controller-video-stage" : "controller-video-gallery"}>
@@ -14,13 +16,14 @@ export default function ControllerVideoMode({ videoQuestion, videoQuestions = []
         <div className="controller-video-frame">
           <VideoPlayer youtubeUrl={displayedQuestion.youtubeUrl} autoplay square={false} />
           <div className={`controller-video-question-overlay ${toneClass}`}>
+            {isResultVisible && <ControllerResultNotice question={displayedQuestion} lastResult={lastResult} />}
             <p>{displayedQuestion.text}</p>
-            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={false} />}
+            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={isResultVisible} />}
             {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>
       ) : videoQuestions.length ? (
-        videoQuestions.slice(0, MAX_VISIBLE_QUESTION_SLOTS).map((question) => {
+        videoQuestions.slice(0, MAX_VISIBLE_VIDEO_QUESTIONS).map((question) => {
           const disabled = question.slotStatus !== "AVAILABLE";
           return (
           <button

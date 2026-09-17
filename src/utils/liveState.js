@@ -3,6 +3,7 @@ export function getSubjectCode(subject) {
 }
 
 export const MAX_VISIBLE_QUESTION_SLOTS = 20;
+export const MAX_VISIBLE_VIDEO_QUESTIONS = 4;
 
 export function getQuestionSlots(state) {
   const liveState = state?.data && !Array.isArray(state.data) ? state.data : state?.liveState || state;

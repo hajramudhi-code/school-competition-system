@@ -51,8 +51,7 @@ export default function CompetitionSetup() {
 
       {activeTab === "sponsor" ? (
         <SponsorPanel
-          competition={selectedCompetition}
-          sponsor={sponsors.find((item) => item.id === selectedCompetition?.sponsorId) || null}
+          sponsors={sponsors}
           onSaved={load}
           showToast={showToast}
         />
@@ -223,49 +222,82 @@ function SummaryPanel({ competition, schools, subjects }) {
   );
 }
 
-function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
+function SponsorPanel({ sponsors, onSaved, showToast }) {
+  const [editingSponsor, setEditingSponsor] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [deleteSponsor, setDeleteSponsor] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function removeSponsor(sponsor) {
+    setBusy(true);
+    try {
+      await sponsorsApi.remove(sponsor.id);
+      showToast("Sponsor deleted", "success");
+      setDeleteSponsor(null);
+      onSaved();
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <div>
+          <h3>Sponsors</h3>
+          <p style={{ marginTop: 6 }}>Manage the sponsors available to competitions.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setEditingSponsor(null); setShowForm(true); }}>
+          <i className="fas fa-plus" aria-hidden="true" /> Add Sponsor
+        </button>
+      </div>
+      {sponsors.length === 0 ? (
+        <EmptyState title="No sponsors yet" description="Add a sponsor to make it available for competition reports." />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {sponsors.map((sponsor) => (
+              <div key={sponsor.id} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", minWidth: 180 }}>
+                {sponsor.logoUrl ? <img src={sponsor.logoUrl} alt="" width={32} height={32} style={{ objectFit: "contain", borderRadius: 6 }} /> : <span style={{ width: 32, height: 32, display: "grid", placeItems: "center", borderRadius: 6, background: "var(--bg-card-elevated)", color: "var(--text-muted)" }}><i className="fas fa-building" aria-hidden="true" /></span>}
+                <strong style={{ flex: 1, fontSize: 13 }}>{sponsor.name}</strong>
+                <button className="btn btn-ghost" onClick={() => { setEditingSponsor(sponsor); setShowForm(true); }} aria-label={`Edit ${sponsor.name}`} title="Edit sponsor"><i className="fas fa-pen" aria-hidden="true" /></button>
+                <button className="btn btn-ghost" onClick={() => setDeleteSponsor(sponsor)} aria-label={`Delete ${sponsor.name}`} title="Delete sponsor"><i className="fas fa-trash" aria-hidden="true" /></button>
+              </div>
+            ))}
+          </div>
+          {deleteSponsor && <InlineConfirm title="Delete sponsor" message={`Delete ${deleteSponsor.name}?`} onCancel={() => setDeleteSponsor(null)} onConfirm={() => removeSponsor(deleteSponsor)} />}
+        </div>
+      )}
+      {showForm && <SponsorFormModal sponsor={editingSponsor} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); onSaved(); }} showToast={showToast} />}
+    </div>
+  );
+}
+
+function SponsorFormModal({ sponsor, onClose, onSaved, showToast }) {
   const [name, setName] = useState(sponsor?.name || "");
   const [logoUrl, setLogoUrl] = useState(sponsor?.logoUrl || "");
   const [logoFile, setLogoFile] = useState(null);
-  const [contact, setContact] = useState(readContact(sponsor?.contactInfo));
-  const [slogan, setSlogan] = useState(sponsor?.slogan || "");
-  const [includeInReport, setIncludeInReport] = useState(sponsor?.includeInReport !== false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
-
-  useEffect(() => {
-    setName(sponsor?.name || "");
-    setLogoUrl(sponsor?.logoUrl || "");
-    setLogoFile(null);
-    setContact(readContact(sponsor?.contactInfo));
-    setSlogan(sponsor?.slogan || "");
-    setIncludeInReport(sponsor?.includeInReport !== false);
-  }, [sponsor?.id]);
 
   async function save(e) {
     e.preventDefault();
-    setError("");
-    if (!name.trim()) return setError("Sponsor name is required when adding a sponsor.");
+    if (!name.trim()) return setError("Sponsor name is required.");
     setBusy(true);
+    setError("");
     try {
-      const contactInfo = Object.fromEntries(Object.entries(contact).filter(([, value]) => value.trim()));
-      const payload = { name: name.trim(), slogan: slogan.trim() || null, includeInReport };
-      if (Object.keys(contactInfo).length) payload.contactInfo = contactInfo;
-      if (logoUrl && !logoFile && !logoUrl.startsWith("data:")) payload.logoUrl = logoUrl;
-      let saved;
       if (logoFile) {
         const formData = new FormData();
-        formData.append("name", payload.name);
+        formData.append("name", name.trim());
         formData.append("logo", logoFile);
-        formData.append("contactInfo", JSON.stringify(payload.contactInfo));
-        if (payload.slogan) formData.append("slogan", payload.slogan);
-        formData.append("includeInReport", String(payload.includeInReport));
-        saved = sponsor ? await sponsorsApi.updateWithLogo(sponsor.id, formData) : await sponsorsApi.createWithLogo(formData);
+        sponsor ? await sponsorsApi.updateWithLogo(sponsor.id, formData) : await sponsorsApi.createWithLogo(formData);
       } else {
-        saved = sponsor ? await sponsorsApi.update(sponsor.id, payload) : await sponsorsApi.create(payload);
+        const payload = { name: name.trim() };
+        if (logoUrl && !logoUrl.startsWith("data:")) payload.logoUrl = logoUrl;
+        sponsor ? await sponsorsApi.update(sponsor.id, payload) : await sponsorsApi.create(payload);
       }
-      await competitionsApi.update(competition.id, { sponsorId: saved.id });
       showToast("Sponsor saved", "success");
       onSaved();
     } catch (e) {
@@ -275,91 +307,19 @@ function SponsorPanel({ competition, sponsor, onSaved, showToast }) {
     }
   }
 
-  async function clearSponsor() {
-    if (!sponsor) return;
-    setBusy(true);
-    try {
-      await competitionsApi.update(competition.id, { sponsorId: null });
-      await sponsorsApi.update(sponsor.id, { name: "", logoUrl: null, contactInfo: null, slogan: null, includeInReport: false });
-      showToast("Sponsor removed", "success");
-      setConfirmClear(false);
-      onSaved();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <h3>Sponsor Information</h3>
-        <p style={{ marginTop: 6 }}>Sponsor details are stored through the API and retrieved by the backend when generating reports.</p>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 0.8fr)", gap: 20, alignItems: "start" }}>
-        <form className="card" onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label className="field-label">Sponsor Name</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zanzibar Telecom" />
-          </div>
-          <LogoUpload value={logoUrl} onChange={setLogoUrl} onFileChange={setLogoFile} label="Sponsor logo" />
-          <div>
-            <label className="field-label">Phone Number</label>
-            <input className="input" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} placeholder="+255..." />
-          </div>
-          <div>
-            <label className="field-label">Email</label>
-            <input className="input" type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="sponsor@example.com" />
-          </div>
-          <div>
-            <label className="field-label">Website / Social</label>
-            <input className="input" value={contact.website} onChange={(e) => setContact({ ...contact, website: e.target.value })} placeholder="https://..." />
-          </div>
-          <div>
-            <label className="field-label">Slogan (optional)</label>
-            <textarea className="input" rows={3} value={slogan} onChange={(e) => setSlogan(e.target.value)} />
-          </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-            <input type="checkbox" checked={includeInReport} onChange={(e) => setIncludeInReport(e.target.checked)} />
-            Include sponsor in report
-          </label>
-          {confirmClear && <InlineConfirm title="Remove sponsor" message="Remove this sponsor from the competition and report?" onCancel={() => setConfirmClear(false)} onConfirm={clearSponsor} />}
-          {error && <span className="field-error">{error}</span>}
-          <div style={{ display: "flex", gap: 10 }}>
-            {sponsor && <button type="button" className="btn btn-danger" onClick={() => setConfirmClear(true)} disabled={busy} aria-label="Clear or remove sponsor" title="Clear or remove sponsor"><i className="fas fa-trash" aria-hidden="true" /></button>}
-            <button className="btn btn-primary" disabled={busy} aria-label="Save sponsor" title="Save sponsor"><i className="fas fa-check" aria-hidden="true" /></button>
-          </div>
-        </form>
-        <div className="card" style={{ minHeight: 300 }}>
-          <h3 style={{ marginBottom: 20 }}>Sponsor Preview</h3>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
-            {logoUrl ? <img src={logoUrl} alt="Sponsor logo preview" width={110} height={110} style={{ objectFit: "contain", borderRadius: 12, border: "1px solid var(--border-color)", background: "var(--bg-secondary)" }} /> : <div style={{ width: 110, height: 110, display: "grid", placeItems: "center", border: "1px dashed var(--border-color)", borderRadius: 12, color: "var(--text-muted)" }}>No logo</div>}
-            <h3>{name || "Sponsor name"}</h3>
-            <p>{slogan || "Sponsor slogan"}</p>
-            <div style={{ width: "100%", textAlign: "left", display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-              {contact.phone && <span>☎ {contact.phone}</span>}
-              {contact.email && <span>✉ {contact.email}</span>}
-              {contact.website && <span>↗ {contact.website}</span>}
-              {!contact.phone && !contact.email && !contact.website && <span style={{ color: "var(--text-muted)" }}>Contact information</span>}
-            </div>
-          </div>
+    <Modal title={sponsor ? "Edit Sponsor" : "Add Sponsor"} onClose={onClose}>
+      <form onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div>
+          <label className="field-label">Sponsor Name</label>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zanzibar Telecom" autoFocus />
         </div>
-      </div>
-    </div>
+        <LogoUpload value={logoUrl} onChange={setLogoUrl} onFileChange={setLogoFile} label="Sponsor logo" />
+        {error && <span className="field-error">{error}</span>}
+        <button className="btn btn-primary" disabled={busy}>{busy ? "Saving..." : "Save Sponsor"}</button>
+      </form>
+    </Modal>
   );
-}
-
-function readContact(value) {
-  if (value && typeof value === "object") return { phone: value.phone || "", email: value.email || "", website: value.website || "" };
-  if (typeof value === "string" && value.startsWith("{")) {
-    try {
-      return readContact(JSON.parse(value));
-    } catch {
-      return { phone: "", email: value, website: "" };
-    }
-  }
-  return { phone: "", email: value || "", website: "" };
 }
 
 function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved, title }) {
@@ -367,7 +327,6 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
   const [name, setName] = useState(competition?.name || "");
   const [logoUrl, setLogoUrl] = useState(competition?.logoUrl || "");
   const [questionDurationSeconds, setQuestionDurationSeconds] = useState(competition?.questionDurationSeconds || 30);
-  const [matchDurationMinutes, setMatchDurationMinutes] = useState(competition?.matchDurationMinutes || 30);
   const [startDate, setStartDate] = useState(competition?.startDate || "");
   const [endDate, setEndDate] = useState(competition?.endDate || "");
   const [schoolIds, setSchoolIds] = useState(competition?.schoolIds || []);
@@ -393,15 +352,12 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
     if (new Date(endDate) < new Date(startDate)) return setError("End date must be after start date.");
     if (!Number.isInteger(Number(questionDurationSeconds)) || Number(questionDurationSeconds) < 5 || Number(questionDurationSeconds) > 300)
       return setError("Question time must be between 5 and 300 seconds.");
-    if (!Number.isInteger(Number(matchDurationMinutes)) || Number(matchDurationMinutes) < 1 || Number(matchDurationMinutes) > 300)
-      return setError("Match time must be between 1 and 300 minutes.");
     setBusy(true);
     try {
       const payload = {
         name,
         logoUrl,
         questionDurationSeconds: Number(questionDurationSeconds),
-        matchDurationMinutes: Number(matchDurationMinutes),
         startDate,
         endDate,
         schoolIds,
@@ -425,17 +381,10 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </div>
         <LogoUpload value={logoUrl} onChange={setLogoUrl} label="Competition logo (optional)" />
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 12 }}>
-          <div>
-            <label className="field-label">Time per question (seconds)</label>
-            <input className="input" type="number" min="5" max="300" step="1" value={questionDurationSeconds} onChange={(e) => setQuestionDurationSeconds(e.target.value)} />
-            <p style={{ fontSize: 12, marginTop: 6 }}>Duration for each question.</p>
-          </div>
-          <div>
-            <label className="field-label">Match time (minutes)</label>
-            <input className="input" type="number" min="1" max="300" step="1" value={matchDurationMinutes} onChange={(e) => setMatchDurationMinutes(e.target.value)} />
-            <p style={{ fontSize: 12, marginTop: 6 }}>Maximum duration for the match.</p>
-          </div>
+        <div>
+          <label className="field-label">Time per question (seconds)</label>
+          <input className="input" type="number" min="5" max="300" step="1" value={questionDurationSeconds} onChange={(e) => setQuestionDurationSeconds(e.target.value)} />
+          <p style={{ fontSize: 12, marginTop: 6 }}>Duration for each question.</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>

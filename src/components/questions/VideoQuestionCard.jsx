@@ -3,8 +3,8 @@ import React from "react";
 const STATE_STYLES = {
   AVAILABLE: { background: "var(--bg-card-elevated)", color: "var(--text-main)", border: "1px solid var(--border-color)", opacity: 1 },
   SELECTED: { background: "var(--bg-card-elevated)", color: "var(--text-main)", border: "1px solid var(--border-color)", opacity: 1 },
-  COMPLETED: { background: "var(--bg-secondary)", color: "var(--text-disabled)", border: "1px solid var(--border-color)", opacity: 1 },
-  DISABLED: { background: "var(--bg-secondary)", color: "var(--text-disabled)", border: "1px solid var(--border-color)", opacity: 1 },
+  COMPLETED: { background: "#64748b", color: "#e2e8f0", border: "1px solid #94a3b8", opacity: 1 },
+  DISABLED: { background: "#64748b", color: "#e2e8f0", border: "1px solid #94a3b8", opacity: 1 },
 };
 
 export default function VideoQuestionCard({ question, slot, status, onSelect }) {

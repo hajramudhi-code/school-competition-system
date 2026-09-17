@@ -47,6 +47,10 @@ export default function ControllerPage() {
         match = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data[0] : null;
       }
       if (!match) {
+        const completedResponse = await matchesApi.list({ competitionId: competitionId, status: "COMPLETED" });
+        match = Array.isArray(completedResponse?.data) ? completedResponse.data[0] : null;
+      }
+      if (!match) {
         setError("No match is currently assigned to this competition.");
         setMatchId(null);
         return;
@@ -63,6 +67,11 @@ export default function ControllerPage() {
   }, [loadAssignment]);
 
   useEffect(() => {
+    const assignmentId = setInterval(loadAssignment, 3000);
+    return () => clearInterval(assignmentId);
+  }, [loadAssignment]);
+
+  useEffect(() => {
     if (!matchId) return undefined;
     return subscribeToLiveState(matchId, {
       asController: true,
@@ -70,13 +79,7 @@ export default function ControllerPage() {
       onUpdate: (nextState) => {
         if (nextState) {
           setError(null);
-          const completedQuestionId = nextState.lastResult?.questionId;
-          const activeQuestionId = nextState.currentQuestion?.id || nextState.videoQuestion?.id;
-          setState(
-            completedQuestionId && completedQuestionId === activeQuestionId
-              ? { ...nextState, currentQuestion: null, videoQuestion: null }
-              : nextState,
-          );
+          setState(nextState);
         }
       },
       onError: (e) => setError(e.message || "Unable to refresh controller state."),
@@ -108,11 +111,12 @@ export default function ControllerPage() {
   return (
     <div
       className={`controller-page ${controllerMode === "NORMAL" ? "controller-normal-page" : ""}`}
-      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+      style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column" }}
     >
       <ResultAnimation lastResult={state?.lastResult} />
 
       <header
+        className="controller-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -124,7 +128,7 @@ export default function ControllerPage() {
         <div style={{ fontWeight: 700, fontSize: 15 }}>{state?.matchName || "Controller Display"}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button className="btn btn-secondary" disabled={!matchId} onClick={toggleMode}>
-            MODE: {controllerMode}
+            {controllerMode === "VIDEO" ? "BONUS QN" : "NORMAL"}
           </button>
           <button className="btn btn-ghost" onClick={logout} style={{ fontSize: 13 }}>
             Logout
@@ -132,7 +136,7 @@ export default function ControllerPage() {
         </div>
       </header>
 
-      <div style={{ padding: "36px 24px", display: "flex", flexDirection: "column", gap: 36, alignItems: "center", flex: 1 }}>
+      <div className="controller-content" style={{ padding: "20px 24px 64px", display: "flex", flexDirection: "column", gap: 20, alignItems: "center", flex: 1 }}>
         {error ? <ErrorState message={error} onRetry={loadAssignment} /> : !state || !subjects ? <LoadingState label="Loading public display..." /> : (
           <>
             <ScoreBoard schoolA={state.schoolA} schoolB={state.schoolB} currentSchoolId={state.currentSchoolId} size="large" />

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { subjectsApi } from "../../api/subjectsApi";
-import { getSubjectCode } from "../../utils/liveState";
 import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, InlineConfirm, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function Subjects() {
@@ -66,7 +65,6 @@ export default function Subjects() {
               <tr style={{ textAlign: "left", background: "var(--bg-card-elevated)" }}>
                 <th style={th}>#</th>
                 <th style={th}>Subject</th>
-                <th style={th}>Code</th>
                 <th style={th}>Status</th>
                 <th style={th}>Registered</th>
                 <th style={th}>Updated</th>
@@ -78,7 +76,6 @@ export default function Subjects() {
                 <tr key={s.id} style={{ borderTop: "1px solid var(--border-color)" }}>
                   <td style={td}>{subjects.indexOf(s) + 1}</td>
                   <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1 }}>{s.name}</td>
-                  <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1, fontWeight: 700 }}>{getSubjectCode(s)}</td>
                   <td style={td}>
                     <StatusBadge status={s.status} />
                   </td>
@@ -125,7 +122,6 @@ function SubjectViewModal({ subject, onClose }) {
     <Modal title="Subject Details" onClose={onClose}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Row label="Name" value={subject.name} />
-        <Row label="Code" value={getSubjectCode(subject)} />
         <Row label="Status" value={subject.status} />
         <Row label="Registered" value={formatDate(subject.createdAt)} />
         <Row label="Updated" value={formatDate(subject.updatedAt || subject.createdAt)} />
@@ -138,19 +134,18 @@ function SubjectViewModal({ subject, onClose }) {
 function SubjectFormModal({ subject, onClose, onSaved }) {
   const isEdit = !!subject.id;
   const [name, setName] = useState(subject.name || "");
-  const [code, setCode] = useState(subject.code || "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const { showToast } = useToast();
 
   async function submit(e) {
     e.preventDefault();
-    if (!name.trim() || !code.trim()) return setError("Subject name and code are required.");
+    if (!name.trim()) return setError("Subject name is required.");
     setBusy(true);
     setError("");
     try {
-      if (isEdit) await subjectsApi.update(subject.id, { name, code });
-      else await subjectsApi.create({ name, code });
+      if (isEdit) await subjectsApi.update(subject.id, { name });
+      else await subjectsApi.create({ name });
       showToast(isEdit ? "Subject updated" : "Subject added", "success");
       onSaved();
     } catch (e) {
@@ -166,10 +161,6 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
         <div>
           <label className="field-label">Subject Name</label>
           <input className={`input ${error ? "has-error" : ""}`} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        </div>
-        <div>
-          <label className="field-label">Subject Code</label>
-          <input className={`input ${error ? "has-error" : ""}`} value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. math" maxLength={12} />
         </div>
         {error && <span className="field-error">{error}</span>}
         <button className="btn btn-primary" disabled={busy}>

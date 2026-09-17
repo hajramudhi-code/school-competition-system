@@ -3,8 +3,8 @@ import React from "react";
 const STATE_STYLES = {
   AVAILABLE: { background: "var(--bg-card-elevated)", color: "var(--text-main)", border: "1px solid var(--border-color)" },
   SELECTED: { background: "var(--blue-primary)", color: "#fff", border: "1px solid var(--blue-primary)" },
-  COMPLETED: { background: "var(--bg-secondary)", color: "var(--text-disabled)", border: "1px solid var(--border-color)" },
-  DISABLED: { background: "var(--bg-secondary)", color: "var(--text-disabled)", border: "1px solid var(--border-color)" },
+  COMPLETED: { background: "#64748b", color: "#e2e8f0", border: "1px solid #94a3b8" },
+  DISABLED: { background: "#64748b", color: "#e2e8f0", border: "1px solid #94a3b8" },
 };
 
 export default function QuestionSelector({ slots = [], onSelect, columns = 10 }) {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import VideoQuestionCard from "../questions/VideoQuestionCard";
-import { getSubjectCode } from "../../utils/liveState";
+import { MAX_VISIBLE_VIDEO_QUESTIONS } from "../../utils/liveState";
 
 export default function HostVideoMode({
   subjects,
@@ -11,8 +11,10 @@ export default function HostVideoMode({
   onSelectQuestion,
   currentVideoQuestion,
   onDecision,
+  onCloseQuestion,
   busy,
   timer,
+  result,
 }) {
   const [overlayOpen, setOverlayOpen] = useState(Boolean(currentVideoQuestion));
   const [selectedQuestionId, setSelectedQuestionId] = useState(currentVideoQuestion?.id || null);
@@ -41,7 +43,7 @@ export default function HostVideoMode({
                 key={s.id}
                 disabled={disabled}
                 onClick={() => onSelectSubject(s.id)}
-                className="btn"
+                className="btn host-subject-button"
                 style={{
                   background: active ? "var(--blue-primary)" : "var(--bg-card-elevated)",
                   color: active ? "#fff" : disabled ? "var(--text-disabled)" : "var(--text-main)",
@@ -49,7 +51,7 @@ export default function HostVideoMode({
                   opacity: disabled ? 0.5 : 1,
                 }}
               >
-                {getSubjectCode(s)}
+                {s.name}
               </button>
             );
           })}
@@ -61,7 +63,7 @@ export default function HostVideoMode({
           <div className="card host-video-questions">
             <h4 style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.05em", marginBottom: 12 }}>VIDEO QUESTIONS</h4>
             <div className="host-video-grid">
-              {videoQuestions.map((q) => (
+              {videoQuestions.slice(0, MAX_VISIBLE_VIDEO_QUESTIONS).map((q) => (
                 <VideoQuestionCard
                   key={q.id}
                   question={q}
@@ -82,6 +84,9 @@ export default function HostVideoMode({
       {currentVideoQuestion && overlayOpen && (
         <div className="host-video-overlay-backdrop" role="presentation">
           <section className="card host-video-overlay" role="dialog" aria-modal="true" aria-label="Selected video question">
+            <button type="button" className="btn btn-ghost host-question-close" onClick={onCloseQuestion} aria-label="Close question" title="Close question">
+              <i className="fas fa-xmark" aria-hidden="true" />
+            </button>
             <div className="host-video-question">
               <VideoPlayer youtubeUrl={currentVideoQuestion.youtubeUrl} autoplay={false} square={false} />
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -89,22 +94,20 @@ export default function HostVideoMode({
                   <span style={{ fontSize: 12, color: "var(--text-muted)" }}>QUESTION ({currentVideoQuestion.marks} marks)</span>
                   <p style={{ color: "var(--text-main)", fontSize: 15, marginTop: 4 }}>{currentVideoQuestion.text}</p>
                 </div>
-                <div className="card-elevated" style={{ padding: 10 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>CORRECT ANSWER</span>
-                  <p style={{ color: "var(--success)", fontWeight: 700, marginTop: 4 }}>
-                    {currentVideoQuestion.mode === "MULTIPLE_CHOICE"
-                      ? `${currentVideoQuestion.correctAnswer}. ${currentVideoQuestion[`option${currentVideoQuestion.correctAnswer}`]}`
-                      : currentVideoQuestion.correctAnswer}
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button className="btn btn-success" style={{ flex: 1, padding: "12px 0" }} disabled={busy} onClick={() => onDecision("CORRECT")}>
-                    <i className="fas fa-check" aria-hidden="true" />
+                {result?.questionId === currentVideoQuestion.id ? (
+                  <div className="card-elevated" style={{ padding: 10 }}>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>CORRECT ANSWER</span>
+                    <p style={{ color: "var(--success)", fontWeight: 700, marginTop: 4 }}>
+                      {currentVideoQuestion.mode === "MULTIPLE_CHOICE"
+                        ? `${currentVideoQuestion.correctAnswer}. ${currentVideoQuestion[`option${currentVideoQuestion.correctAnswer}`]}`
+                        : currentVideoQuestion.correctAnswer}
+                    </p>
+                  </div>
+                ) : (
+                  <button className="btn btn-success" style={{ width: "100%", padding: "12px 0" }} disabled={busy} onClick={() => onDecision("CORRECT")}>
+                    <i className="fas fa-check" aria-hidden="true" /> CORRECT
                   </button>
-                  <button className="btn btn-danger" style={{ flex: 1, padding: "12px 0" }} disabled={busy} onClick={() => onDecision("INCORRECT")}>
-                    <i className="fas fa-xmark" aria-hidden="true" />
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </section>

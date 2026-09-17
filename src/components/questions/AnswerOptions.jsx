@@ -12,17 +12,17 @@ export default function AnswerOptions({ question, size = "normal", revealCorrect
       ["D", question.optionD],
     ];
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: big ? 16 : 10 }}>
+      <div className={`answer-options-list ${big ? "is-large" : ""}`} role="list" aria-label="Answer options">
         {options.map(([letter, text]) => {
           const isCorrect = revealCorrect && question.correctAnswer === letter;
           return (
             <div
               key={letter}
-              className="card-elevated"
+              className={`answer-option ${isCorrect ? "is-correct" : ""}`}
+              role="listitem"
               style={{
-                padding: big ? "18px 20px" : "10px 14px",
-                fontSize: big ? 20 : 14,
-                borderColor: isCorrect ? "var(--success)" : "var(--border-color)",
+                padding: big ? "10px 4px" : "8px 4px",
+                fontSize: big ? 26 : 16,
               }}
             >
               <strong style={{ marginRight: 8 }}>{letter}.</strong> {text}
