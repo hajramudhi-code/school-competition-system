@@ -840,12 +840,23 @@ input, select, textarea {
 }
 
 .controller-page .controller-question-stage.has-question::before {
-  background: rgba(214, 226, 238, .72);
+  background: rgba(11, 18, 31, .68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .controller-page .controller-question-content > p,
 .controller-page .controller-video-question-overlay p {
   color: #071c3b !important;
+}
+
+.controller-page .controller-question-stage.has-question {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 18, 31, .55);
 }
 
 .controller-normal-page .controller-question-row {
@@ -1169,11 +1180,9 @@ input, select, textarea {
 }
 
 .controller-question-overlay {
-  width: min(94%, 980px);
-  max-height: 100%;
-  position: absolute;
-  inset: 0;
-  margin: auto;
+  width: min(94vw, 980px);
+  max-height: min(82vh, 780px);
+  position: relative;
   overflow-y: auto;
   z-index: 1;
   padding: clamp(28px, 5vw, 64px);

@@ -23,6 +23,42 @@ export default function HostPage() {
   const timeoutFiredRef = useRef(false);
   const latestMutationRef = useRef(0);
 
+  const closeQuestionView = useCallback((result, questionId) => {
+    setState((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        currentQuestion: null,
+        videoQuestion: null,
+        lastResult: {
+          questionId,
+          result,
+          schoolId: current.currentSchoolId,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    });
+  }, []);
+
+  const submitDecision = useCallback(async (result) => {
+    const currentQuestion = state?.questionMode === "VIDEO" ? state?.videoQuestion : state?.currentQuestion;
+    const questionId = currentQuestion?.id;
+    if (!matchId || !questionId) return;
+
+    latestMutationRef.current = Date.now();
+    setBusy(true);
+    try {
+      const nextState = await hostApi.recordResult(matchId, questionId, result);
+      if (nextState) setState(nextState);
+      closeQuestionView(result, questionId);
+      refresh();
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }, [closeQuestionView, matchId, refresh, showToast, state?.currentQuestion, state?.questionMode, state?.videoQuestion]);
+
   const loadAssignment = useCallback(async () => {
     setError(null);
     try {
@@ -151,7 +187,7 @@ export default function HostPage() {
                   questionSlots={getQuestionSlots(state)}
                   onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
                   currentQuestion={state.currentQuestion}
-                  onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.currentQuestion.id, result))}
+                  onDecision={(result) => submitDecision(result)}
                   busy={busy}
                 />
               ) : (
@@ -162,13 +198,15 @@ export default function HostPage() {
                   videoQuestions={videoQuestions}
                   onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
                   currentVideoQuestion={state.videoQuestion}
-                  onDecision={(result) => guarded(() => hostApi.recordResult(matchId, state.videoQuestion.id, result))}
+                  onDecision={(result) => submitDecision(result)}
                   busy={busy}
                   timer={state.timer}
                 />
               )}
 
-              {state.currentQuestion && <HostControls timer={state.timer} disabled={busy} />}
+              {(state.currentQuestion || state.videoQuestion) && (
+                <HostControls timer={state.timer} disabled={busy} onExpire={() => submitDecision("TIMEOUT")} />
+              )}
             </div>
           </>
         )}

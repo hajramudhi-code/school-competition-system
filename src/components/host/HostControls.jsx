@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-export default function HostControls({ timer }) {
+export default function HostControls({ timer, onExpire }) {
   const [displayRemaining, setDisplayRemaining] = useState(timer.remainingSeconds);
+  const expiredRef = useRef(false);
 
   useEffect(() => {
     setDisplayRemaining(timer.remainingSeconds);
-  }, [timer.state]);
+    expiredRef.current = false;
+  }, [timer.state, timer.remainingSeconds]);
 
   useEffect(() => {
     if (timer.state !== "RUNNING") return undefined;
@@ -14,10 +16,17 @@ export default function HostControls({ timer }) {
       const now = Date.now();
       const elapsed = (now - lastTick) / 1000;
       lastTick = now;
-      setDisplayRemaining((current) => Math.max(0, current - elapsed));
+      setDisplayRemaining((current) => {
+        const next = Math.max(0, current - elapsed);
+        if (next <= 0 && !expiredRef.current) {
+          expiredRef.current = true;
+          onExpire?.();
+        }
+        return next;
+      });
     }, 250);
     return () => clearInterval(id);
-  }, [timer.state]);
+  }, [onExpire, timer.state]);
 
   const pct = timer.durationSeconds ? Math.max(0, (displayRemaining / timer.durationSeconds) * 100) : 0;
   const low = displayRemaining <= 10;
