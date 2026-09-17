@@ -367,6 +367,7 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
   const [name, setName] = useState(competition?.name || "");
   const [logoUrl, setLogoUrl] = useState(competition?.logoUrl || "");
   const [questionDurationSeconds, setQuestionDurationSeconds] = useState(competition?.questionDurationSeconds || 30);
+  const [matchDurationMinutes, setMatchDurationMinutes] = useState(competition?.matchDurationMinutes || 30);
   const [startDate, setStartDate] = useState(competition?.startDate || "");
   const [endDate, setEndDate] = useState(competition?.endDate || "");
   const [schoolIds, setSchoolIds] = useState(competition?.schoolIds || []);
@@ -392,9 +393,20 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
     if (new Date(endDate) < new Date(startDate)) return setError("End date must be after start date.");
     if (!Number.isInteger(Number(questionDurationSeconds)) || Number(questionDurationSeconds) < 5 || Number(questionDurationSeconds) > 300)
       return setError("Question time must be between 5 and 300 seconds.");
+    if (!Number.isInteger(Number(matchDurationMinutes)) || Number(matchDurationMinutes) < 1 || Number(matchDurationMinutes) > 300)
+      return setError("Match time must be between 1 and 300 minutes.");
     setBusy(true);
     try {
-      const payload = { name, logoUrl, questionDurationSeconds: Number(questionDurationSeconds), startDate, endDate, schoolIds, subjectIds };
+      const payload = {
+        name,
+        logoUrl,
+        questionDurationSeconds: Number(questionDurationSeconds),
+        matchDurationMinutes: Number(matchDurationMinutes),
+        startDate,
+        endDate,
+        schoolIds,
+        subjectIds,
+      };
       if (isEdit) await competitionsApi.update(competition.id, payload);
       else await competitionsApi.create(payload);
       onSaved();
@@ -413,10 +425,17 @@ function CompetitionFormModal({ competition, schools, subjects, onClose, onSaved
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </div>
         <LogoUpload value={logoUrl} onChange={setLogoUrl} label="Competition logo (optional)" />
-        <div>
-          <label className="field-label">Time per question (seconds)</label>
-          <input className="input" type="number" min="5" max="300" step="1" value={questionDurationSeconds} onChange={(e) => setQuestionDurationSeconds(e.target.value)} />
-          <p style={{ fontSize: 12, marginTop: 6 }}>This duration applies to every question in this competition.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 12 }}>
+          <div>
+            <label className="field-label">Time per question (seconds)</label>
+            <input className="input" type="number" min="5" max="300" step="1" value={questionDurationSeconds} onChange={(e) => setQuestionDurationSeconds(e.target.value)} />
+            <p style={{ fontSize: 12, marginTop: 6 }}>Duration for each question.</p>
+          </div>
+          <div>
+            <label className="field-label">Match time (minutes)</label>
+            <input className="input" type="number" min="1" max="300" step="1" value={matchDurationMinutes} onChange={(e) => setMatchDurationMinutes(e.target.value)} />
+            <p style={{ fontSize: 12, marginTop: 6 }}>Maximum duration for the match.</p>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>

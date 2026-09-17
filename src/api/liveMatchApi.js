@@ -9,6 +9,8 @@ export const hostApi = {
   selectQuestion: (matchId, questionId) => apiClient.post(`/matches/${matchId}/select-question`, { questionId }),
   timer: (matchId, action, durationSeconds) =>
     apiClient.post(`/matches/${matchId}/timer`, { action, durationSeconds }),
+  matchTimer: (matchId, action) =>
+    apiClient.post(`/matches/${matchId}/match-timer`, { action }),
   recordResult: (matchId, questionId, result) =>
     apiClient.post(`/matches/${matchId}/question-result`, { questionId, result }),
   setMode: (matchId, mode) => apiClient.post(`/matches/${matchId}/mode`, { mode }),

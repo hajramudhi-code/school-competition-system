@@ -10,6 +10,7 @@ import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
 import HostControls from "../../components/host/HostControls";
 import { getQuestionSlots, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
+import { useLiveCountdown } from "../../components/common/useLiveCountdown";
 
 export default function HostPage() {
   const { user, logout } = useAuth();
@@ -20,6 +21,9 @@ export default function HostPage() {
   const [state, setState] = useState(null);
   const [subjects, setSubjects] = useState(null);
   const [videoQuestions, setVideoQuestions] = useState([]);
+  const [matchDurationMinutes, setMatchDurationMinutes] = useState(30);
+  const [matchTimer, setMatchTimer] = useState(null);
+  const [matchTimerBusy, setMatchTimerBusy] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const timeoutFiredRef = useRef(false);
@@ -57,6 +61,7 @@ export default function HostPage() {
           && revealedQuestionId === dismissedQuestionRef.current
           && activeQuestionId === dismissedQuestionRef.current;
         setState(shouldHideDismissedQuestion ? { ...nextState, currentQuestion: null, videoQuestion: null } : nextState);
+        if (nextState?.matchTimer) setMatchTimer(nextState.matchTimer);
       })
       .catch((e) => setError(e.message));
   }, [matchId]);
@@ -67,6 +72,11 @@ export default function HostPage() {
     if (!matchId || !questionId) return;
 
     latestMutationRef.current = Date.now();
+    const isTimeout = result === "TIMEOUT";
+    if (isTimeout) {
+      dismissedQuestionRef.current = questionId;
+      closeQuestionView(result, questionId, state);
+    }
     setBusy(true);
     try {
       const nextState = await hostApi.recordResult(matchId, questionId, result);
@@ -76,6 +86,7 @@ export default function HostPage() {
         refresh();
       }
     } catch (e) {
+      if (isTimeout) refresh();
       showToast(e.message, "error");
     } finally {
       setBusy(false);
@@ -96,6 +107,7 @@ export default function HostPage() {
       ]);
 
       const subjectList = Array.isArray(subjectResponse?.data) ? subjectResponse.data : [];
+      setMatchDurationMinutes(Number(competition?.matchDurationMinutes) || 30);
       const selectedSubjectIds = new Set(competition?.subjectIds || []);
       setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
 
@@ -110,6 +122,11 @@ export default function HostPage() {
         return;
       }
       setMatchId(match.id);
+      setMatchTimer((current) => current || {
+        state: "IDLE",
+        durationSeconds: (Number(competition?.matchDurationMinutes) || 30) * 60,
+        remainingSeconds: (Number(competition?.matchDurationMinutes) || 30) * 60,
+      });
     } catch (e) {
       setError(e.message || "Unable to load host assignment.");
     }
@@ -153,6 +170,30 @@ export default function HostPage() {
     }
   }
 
+  const toggleMatchTimer = useCallback(async () => {
+    if (!matchId || matchTimerBusy) return;
+    const action = matchTimer?.state === "RUNNING" ? "PAUSE" : "START";
+    const previousTimer = matchTimer;
+    const durationSeconds = (matchDurationMinutes || 30) * 60;
+    setMatchTimerBusy(true);
+    setMatchTimer((current) => ({
+      ...(current || {}),
+      state: action === "START" ? "RUNNING" : "PAUSED",
+      durationSeconds: current?.durationSeconds || durationSeconds,
+      remainingSeconds: current?.remainingSeconds ?? durationSeconds,
+    }));
+    try {
+      const response = await hostApi.matchTimer(matchId, action);
+      if (response?.matchTimer) setMatchTimer(response.matchTimer);
+      else if (response?.state && response?.remainingSeconds !== undefined) setMatchTimer(response);
+    } catch (e) {
+      setMatchTimer(previousTimer);
+      showToast(e.message, "error");
+    } finally {
+      setMatchTimerBusy(false);
+    }
+  }, [matchDurationMinutes, matchId, matchTimer, matchTimerBusy, showToast]);
+
   return (
     <div className="host-page">
       <header
@@ -161,6 +202,7 @@ export default function HostPage() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          position: "relative",
           padding: "12px 24px",
           borderBottom: "1px solid var(--border-color)",
           background: "var(--bg-secondary)",
@@ -172,6 +214,7 @@ export default function HostPage() {
             {state ? `${state.date} | ${state.day}` : "Waiting for match data"}
           </div>
         </div>
+        <MatchTimerControl timer={matchTimer} busy={matchTimerBusy} onToggle={toggleMatchTimer} />
         <div className="host-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             className="btn btn-secondary"
@@ -240,6 +283,37 @@ export default function HostPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function MatchTimerControl({ timer, busy, onToggle }) {
+  const remaining = useLiveCountdown(timer);
+  const isRunning = timer?.state === "RUNNING";
+  const totalMinutes = Math.floor((timer?.durationSeconds || 0) / 60);
+  const minutes = Math.floor(remaining / 60);
+  const seconds = Math.ceil(remaining % 60).toString().padStart(2, "0");
+
+  return (
+    <div
+      className="host-match-timer"
+      style={{
+        position: "absolute",
+        left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
+        MATCH {totalMinutes ? `${minutes}:${seconds}` : "--:--"}
+      </span>
+      <button className={`btn ${isRunning ? "btn-secondary" : "btn-primary"}`} disabled={busy || !timer} onClick={onToggle}>
+        <i className={`fas ${isRunning ? "fa-pause" : "fa-play"}`} aria-hidden="true" />
+        {isRunning ? "PAUSE" : "START"}
+      </button>
     </div>
   );
 }
