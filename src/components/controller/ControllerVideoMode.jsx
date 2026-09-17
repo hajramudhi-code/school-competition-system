@@ -1,6 +1,8 @@
 import React from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import AnswerOptions from "../questions/AnswerOptions";
+import { MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
+import { useLiveCountdown } from "../common/useLiveCountdown";
 
 export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer }) {
   const displayedQuestion = videoQuestion;
@@ -13,12 +15,12 @@ export default function ControllerVideoMode({ videoQuestion, videoQuestions = []
           <VideoPlayer youtubeUrl={displayedQuestion.youtubeUrl} autoplay square={false} />
           <div className={`controller-video-question-overlay ${toneClass}`}>
             <p>{displayedQuestion.text}</p>
-            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={isResultVisible} />}
+            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={false} />}
             {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>
       ) : videoQuestions.length ? (
-        videoQuestions.map((question) => {
+        videoQuestions.slice(0, MAX_VISIBLE_QUESTION_SLOTS).map((question) => {
           const disabled = question.slotStatus !== "AVAILABLE";
           return (
           <button
@@ -42,11 +44,12 @@ export default function ControllerVideoMode({ videoQuestion, videoQuestions = []
 }
 
 function TimerBar({ timer, toneClass }) {
-  const pct = timer.durationSeconds ? Math.max(0, (timer.remainingSeconds / timer.durationSeconds) * 100) : 0;
+  const remaining = useLiveCountdown(timer);
+  const pct = timer.durationSeconds ? Math.max(0, (remaining / timer.durationSeconds) * 100) : 0;
   const accent = toneClass === "has-result-correct" ? "#22c55e" : toneClass === "has-result-incorrect" ? "#ef4444" : "#22d3ee";
   return (
     <div className="controller-video-timer">
-      <span>{timer.remainingSeconds}s</span>
+      <span>{Math.ceil(remaining)}s</span>
       <div><i style={{ width: `${pct}%`, background: accent }} /></div>
     </div>
   );

@@ -2,6 +2,8 @@ export function getSubjectCode(subject) {
   return subject?.code || subject?.subjectCode || subject?.subject_code || "-";
 }
 
+export const MAX_VISIBLE_QUESTION_SLOTS = 20;
+
 export function getQuestionSlots(state) {
   const liveState = state?.data && !Array.isArray(state.data) ? state.data : state?.liveState || state;
   const slots = liveState?.questionSlots
@@ -16,5 +18,5 @@ export function getQuestionSlots(state) {
     questionId: item.questionId || item.question_id || item.question?.id || item.id,
     slot: item.slot || item.questionNumber || item.question_number || index + 1,
     status: item.status || item.slotStatus || item.slot_status || "AVAILABLE",
-  })).filter((item) => item.questionId);
+  })).filter((item) => item.questionId).slice(0, MAX_VISIBLE_QUESTION_SLOTS);
 }

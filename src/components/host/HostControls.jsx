@@ -1,32 +1,20 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { useLiveCountdown } from "../common/useLiveCountdown";
 
 export default function HostControls({ timer, onExpire }) {
-  const [displayRemaining, setDisplayRemaining] = useState(timer.remainingSeconds);
+  const displayRemaining = useLiveCountdown(timer);
   const expiredRef = useRef(false);
 
   useEffect(() => {
-    setDisplayRemaining(timer.remainingSeconds);
     expiredRef.current = false;
-  }, [timer.state, timer.remainingSeconds]);
+  }, [timer.state, timer.durationSeconds]);
 
   useEffect(() => {
-    if (timer.state !== "RUNNING") return undefined;
-    let lastTick = Date.now();
-    const id = setInterval(() => {
-      const now = Date.now();
-      const elapsed = (now - lastTick) / 1000;
-      lastTick = now;
-      setDisplayRemaining((current) => {
-        const next = Math.max(0, current - elapsed);
-        if (next <= 0 && !expiredRef.current) {
-          expiredRef.current = true;
-          onExpire?.();
-        }
-        return next;
-      });
-    }, 250);
-    return () => clearInterval(id);
-  }, [onExpire, timer.state]);
+    if (timer.state === "RUNNING" && displayRemaining <= 0 && !expiredRef.current) {
+      expiredRef.current = true;
+      onExpire?.();
+    }
+  }, [displayRemaining, onExpire, timer.state]);
 
   const pct = timer.durationSeconds ? Math.max(0, (displayRemaining / timer.durationSeconds) * 100) : 0;
   const low = displayRemaining <= 10;

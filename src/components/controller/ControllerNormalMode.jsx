@@ -1,5 +1,6 @@
 import React from "react";
 import AnswerOptions from "../questions/AnswerOptions";
+import { useLiveCountdown } from "../common/useLiveCountdown";
 
 export default function ControllerNormalMode({ currentQuestion, timer }) {
   const displayedQuestion = currentQuestion;
@@ -11,7 +12,7 @@ export default function ControllerNormalMode({ currentQuestion, timer }) {
         <div className={`controller-question-overlay ${toneClass}`}>
           <div className="controller-question-content">
             <p style={{ fontSize: 26, color: "var(--text-main)", lineHeight: 1.4 }}>{displayedQuestion.text}</p>
-            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={isResultVisible} />}
+            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={false} />}
             {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>
@@ -25,8 +26,9 @@ export default function ControllerNormalMode({ currentQuestion, timer }) {
 }
 
 function TimerBar({ timer, toneClass }) {
-  const pct = timer.durationSeconds ? Math.max(0, (timer.remainingSeconds / timer.durationSeconds) * 100) : 0;
-  const accent = toneClass === "has-result-correct" ? "var(--success)" : toneClass === "has-result-incorrect" ? "var(--danger)" : timer.remainingSeconds <= 10 ? "var(--danger)" : "var(--blue-highlight)";
+  const remaining = useLiveCountdown(timer);
+  const pct = timer.durationSeconds ? Math.max(0, (remaining / timer.durationSeconds) * 100) : 0;
+  const accent = toneClass === "has-result-correct" ? "var(--success)" : toneClass === "has-result-incorrect" ? "var(--danger)" : remaining <= 10 ? "var(--danger)" : "var(--blue-highlight)";
 
   return (
     <div style={{ width: "100%" }}>

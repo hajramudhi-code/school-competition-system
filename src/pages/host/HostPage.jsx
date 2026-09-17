@@ -9,7 +9,7 @@ import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
 import HostControls from "../../components/host/HostControls";
-import { getQuestionSlots } from "../../utils/liveState";
+import { getQuestionSlots, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
 
 export default function HostPage() {
   const { user, logout } = useAuth();
@@ -127,7 +127,7 @@ export default function HostPage() {
 
   useEffect(() => {
     if (state?.questionMode === "VIDEO" && state?.currentSubjectId) {
-      hostApi.listVideoQuestions(matchId, state.currentSubjectId).then((res) => setVideoQuestions(res.data));
+      hostApi.listVideoQuestions(matchId, state.currentSubjectId).then((res) => setVideoQuestions((res.data || []).slice(0, MAX_VISIBLE_QUESTION_SLOTS)));
     }
   }, [matchId, state?.questionMode, state?.currentSubjectId]);
 
