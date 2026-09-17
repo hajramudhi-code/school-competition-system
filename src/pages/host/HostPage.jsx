@@ -24,6 +24,7 @@ export default function HostPage() {
   const [busy, setBusy] = useState(false);
   const timeoutFiredRef = useRef(false);
   const latestMutationRef = useRef(0);
+  const dismissedQuestionRef = useRef(null);
 
   const closeQuestionView = useCallback((result, questionId, serverState = null) => {
     setState((current) => {
@@ -49,7 +50,13 @@ export default function HostPage() {
     hostApi
       .getLiveState(matchId)
       .then((nextState) => {
-        if (requestStartedAt >= latestMutationRef.current) setState(nextState);
+        if (requestStartedAt < latestMutationRef.current) return;
+        const revealedQuestionId = nextState?.lastResult?.questionId;
+        const activeQuestionId = nextState?.currentQuestion?.id || nextState?.videoQuestion?.id;
+        const shouldHideDismissedQuestion = dismissedQuestionRef.current
+          && revealedQuestionId === dismissedQuestionRef.current
+          && activeQuestionId === dismissedQuestionRef.current;
+        setState(shouldHideDismissedQuestion ? { ...nextState, currentQuestion: null, videoQuestion: null } : nextState);
       })
       .catch((e) => setError(e.message));
   }, [matchId]);
@@ -63,6 +70,7 @@ export default function HostPage() {
     setBusy(true);
     try {
       const nextState = await hostApi.recordResult(matchId, questionId, result);
+      dismissedQuestionRef.current = questionId;
       closeQuestionView(result, questionId, nextState ?? state);
       if (!nextState) {
         refresh();
@@ -200,7 +208,10 @@ export default function HostPage() {
                   currentSubjectId={state.currentSubjectId}
                   onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
                   questionSlots={getQuestionSlots(state)}
-                  onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
+                  onSelectQuestion={(qid) => {
+                    dismissedQuestionRef.current = null;
+                    guarded(() => hostApi.selectQuestion(matchId, qid));
+                  }}
                   currentQuestion={state.currentQuestion}
                   onDecision={(result) => submitDecision(result)}
                   busy={busy}
@@ -211,7 +222,10 @@ export default function HostPage() {
                   currentSubjectId={state.currentSubjectId}
                   onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
                   videoQuestions={videoQuestions}
-                  onSelectQuestion={(qid) => guarded(() => hostApi.selectQuestion(matchId, qid))}
+                  onSelectQuestion={(qid) => {
+                    dismissedQuestionRef.current = null;
+                    guarded(() => hostApi.selectQuestion(matchId, qid));
+                  }}
                   currentVideoQuestion={state.videoQuestion}
                   onDecision={(result) => submitDecision(result)}
                   busy={busy}

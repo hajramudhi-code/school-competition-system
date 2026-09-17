@@ -70,7 +70,13 @@ export default function ControllerPage() {
       onUpdate: (nextState) => {
         if (nextState) {
           setError(null);
-          setState(nextState);
+          const completedQuestionId = nextState.lastResult?.questionId;
+          const activeQuestionId = nextState.currentQuestion?.id || nextState.videoQuestion?.id;
+          setState(
+            completedQuestionId && completedQuestionId === activeQuestionId
+              ? { ...nextState, currentQuestion: null, videoQuestion: null }
+              : nextState,
+          );
         }
       },
       onError: (e) => setError(e.message || "Unable to refresh controller state."),
