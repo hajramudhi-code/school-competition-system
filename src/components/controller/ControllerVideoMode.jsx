@@ -1,18 +1,38 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import AnswerOptions from "../questions/AnswerOptions";
+import ControllerResultNotice from "./ControllerResultNotice";
 
 export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer, lastResult }) {
-  const toneClass = lastResult?.result === "CORRECT" ? "has-result-correct" : lastResult?.result === "INCORRECT" ? "has-result-incorrect" : "";
+  const [previousQuestion, setPreviousQuestion] = useState(null);
+  const [visibleResultKey, setVisibleResultKey] = useState(null);
+
+  useEffect(() => {
+    if (videoQuestion) setPreviousQuestion(videoQuestion);
+  }, [videoQuestion]);
+
+  useEffect(() => {
+    if (!lastResult) return undefined;
+    const resultKey = `${lastResult.questionId}-${lastResult.timestamp}`;
+    setVisibleResultKey(resultKey);
+    const timeoutId = setTimeout(() => setVisibleResultKey((key) => (key === resultKey ? null : key)), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [lastResult?.questionId, lastResult?.timestamp]);
+
+  const resultKey = lastResult ? `${lastResult.questionId}-${lastResult.timestamp}` : null;
+  const isResultVisible = visibleResultKey === resultKey && lastResult?.questionId === previousQuestion?.id;
+  const displayedQuestion = videoQuestion || (isResultVisible ? previousQuestion : null);
+  const toneClass = isResultVisible && lastResult.result === "CORRECT" ? "has-result-correct" : isResultVisible && lastResult.result === "INCORRECT" ? "has-result-incorrect" : "";
 
   return (
-    <div className={videoQuestion ? "controller-video-stage" : "controller-video-gallery"}>
-      {videoQuestion ? (
+    <div className={displayedQuestion ? "controller-video-stage" : "controller-video-gallery"}>
+      {displayedQuestion ? (
         <div className="controller-video-frame">
-          <VideoPlayer youtubeUrl={videoQuestion.youtubeUrl} autoplay square={false} />
+          <VideoPlayer youtubeUrl={displayedQuestion.youtubeUrl} autoplay square={false} />
           <div className={`controller-video-question-overlay ${toneClass}`}>
-            <p>{videoQuestion.text}</p>
-            {videoQuestion.mode !== "MENTION" && <AnswerOptions question={videoQuestion} size="large" />}
+            {isResultVisible && <ControllerResultNotice question={displayedQuestion} lastResult={lastResult} />}
+            <p>{displayedQuestion.text}</p>
+            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={isResultVisible} />}
             {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>

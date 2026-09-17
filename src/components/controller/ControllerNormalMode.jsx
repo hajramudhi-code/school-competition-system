@@ -1,16 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AnswerOptions from "../questions/AnswerOptions";
+import ControllerResultNotice from "./ControllerResultNotice";
 
 export default function ControllerNormalMode({ currentQuestion, timer, lastResult }) {
-  const toneClass = lastResult?.result === "CORRECT" ? "has-result-correct" : lastResult?.result === "INCORRECT" ? "has-result-incorrect" : "";
+  const [previousQuestion, setPreviousQuestion] = useState(null);
+  const [visibleResultKey, setVisibleResultKey] = useState(null);
+
+  useEffect(() => {
+    if (currentQuestion) setPreviousQuestion(currentQuestion);
+  }, [currentQuestion]);
+
+  useEffect(() => {
+    if (!lastResult) return undefined;
+    const resultKey = `${lastResult.questionId}-${lastResult.timestamp}`;
+    setVisibleResultKey(resultKey);
+    const timeoutId = setTimeout(() => setVisibleResultKey((key) => (key === resultKey ? null : key)), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [lastResult?.questionId, lastResult?.timestamp]);
+
+  const resultKey = lastResult ? `${lastResult.questionId}-${lastResult.timestamp}` : null;
+  const isResultVisible = visibleResultKey === resultKey && lastResult?.questionId === previousQuestion?.id;
+  const displayedQuestion = currentQuestion || (isResultVisible ? previousQuestion : null);
+  const toneClass = isResultVisible && lastResult.result === "CORRECT" ? "has-result-correct" : isResultVisible && lastResult.result === "INCORRECT" ? "has-result-incorrect" : "";
 
   return (
-    <div className={`controller-question-stage ${currentQuestion ? "has-question" : ""}`}>
-      {currentQuestion ? (
+    <div className={`controller-question-stage ${displayedQuestion ? "has-question" : ""}`}>
+      {displayedQuestion ? (
         <div className={`controller-question-overlay ${toneClass}`}>
           <div className="controller-question-content">
-            <p style={{ fontSize: 26, color: "var(--text-main)", lineHeight: 1.4 }}>{currentQuestion.text}</p>
-            {currentQuestion.mode !== "MENTION" && <AnswerOptions question={currentQuestion} size="large" />}
+            {isResultVisible && <ControllerResultNotice question={displayedQuestion} lastResult={lastResult} />}
+            <p style={{ fontSize: 26, color: "var(--text-main)", lineHeight: 1.4 }}>{displayedQuestion.text}</p>
+            {displayedQuestion.mode !== "MENTION" && <AnswerOptions question={displayedQuestion} size="large" revealCorrect={isResultVisible} />}
             {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>
