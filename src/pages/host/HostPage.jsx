@@ -14,6 +14,8 @@ import { getQuestionSlots } from "../../utils/liveState";
 export default function HostPage() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
+  const competitionId = user?.competitionId ?? user?.competition?.id ?? user?.competition_id ?? null;
+  const hostName = user?.name || user?.username || "Host";
   const [matchId, setMatchId] = useState(null);
   const [state, setState] = useState(null);
   const [subjects, setSubjects] = useState(null);
@@ -40,6 +42,17 @@ export default function HostPage() {
     });
   }, []);
 
+  const refresh = useCallback(() => {
+    if (!matchId) return;
+    const requestStartedAt = Date.now();
+    hostApi
+      .getLiveState(matchId)
+      .then((nextState) => {
+        if (requestStartedAt >= latestMutationRef.current) setState(nextState);
+      })
+      .catch((e) => setError(e.message));
+  }, [matchId]);
+
   const submitDecision = useCallback(async (result) => {
     const currentQuestion = state?.questionMode === "VIDEO" ? state?.videoQuestion : state?.currentQuestion;
     const questionId = currentQuestion?.id;
@@ -61,40 +74,40 @@ export default function HostPage() {
 
   const loadAssignment = useCallback(async () => {
     setError(null);
+    if (!competitionId) {
+      setError("No competition assigned to this user.");
+      return;
+    }
     try {
       const [subjectResponse, competition, activeResponse] = await Promise.all([
         subjectsApi.list({}),
-        competitionsApi.get(user.competitionId),
-        matchesApi.list({ competitionId: user.competitionId, status: "IN_PROGRESS" }),
+        competitionsApi.get(competitionId),
+        matchesApi.list({ competitionId: competitionId, status: "IN_PROGRESS" }),
       ]);
-      const selectedSubjectIds = new Set(competition.subjectIds || []);
-      setSubjects(subjectResponse.data.filter((subject) => subject.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
-      let match = activeResponse.data[0];
+
+      const subjectList = Array.isArray(subjectResponse?.data) ? subjectResponse.data : [];
+      const selectedSubjectIds = new Set(competition?.subjectIds || []);
+      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
+
+      let match = Array.isArray(activeResponse?.data) ? activeResponse.data[0] : null;
       if (!match) {
-        const upcomingResponse = await matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" });
-        match = upcomingResponse.data[0];
+        const upcomingResponse = await matchesApi.list({ competitionId: competitionId, status: "UPCOMING" });
+        match = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data[0] : null;
       }
-      if (!match) throw new Error("No match is currently assigned to this competition.");
+      if (!match) {
+        setError("No match is currently assigned to this competition.");
+        setMatchId(null);
+        return;
+      }
       setMatchId(match.id);
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Unable to load host assignment.");
     }
-  }, [user.competitionId]);
+  }, [competitionId]);
 
   useEffect(() => {
     loadAssignment();
   }, [loadAssignment]);
-
-  const refresh = useCallback(() => {
-    if (!matchId) return;
-    const requestStartedAt = Date.now();
-    hostApi
-      .getLiveState(matchId)
-      .then((nextState) => {
-        if (requestStartedAt >= latestMutationRef.current) setState(nextState);
-      })
-      .catch((e) => setError(e.message));
-  }, [matchId]);
 
   useEffect(() => {
     refresh();
@@ -157,7 +170,7 @@ export default function HostPage() {
           >
             MODE: {state?.questionMode || "NORMAL"}
           </button>
-          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{user.name}</span>
+          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{hostName}</span>
           <button className="btn btn-ghost" onClick={logout}>
             Logout
           </button>

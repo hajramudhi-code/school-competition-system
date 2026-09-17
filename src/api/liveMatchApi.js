@@ -27,20 +27,30 @@ export const controllerApi = {
 // stream. This is the only place the polling interval lives.
 export function subscribeToLiveState(matchId, { asController = false, intervalMs = 1200, onUpdate, onError }) {
   let cancelled = false;
+  let timeoutId = null;
+
   const fetchOnce = async () => {
+    if (cancelled) return;
+
     try {
       const state = asController
         ? await controllerApi.getPublicState(matchId)
         : await hostApi.getLiveState(matchId);
-      if (!cancelled) onUpdate(state);
+
+      if (!cancelled && state) onUpdate?.(state);
     } catch (err) {
       if (!cancelled) onError?.(err);
+    } finally {
+      if (!cancelled) {
+        timeoutId = setTimeout(fetchOnce, intervalMs);
+      }
     }
   };
+
   fetchOnce();
-  const id = setInterval(fetchOnce, intervalMs);
+
   return () => {
     cancelled = true;
-    clearInterval(id);
+    if (timeoutId) clearTimeout(timeoutId);
   };
 }

@@ -15,6 +15,7 @@ import { getQuestionSlots } from "../../utils/liveState";
 
 export default function ControllerPage() {
   const { user, logout } = useAuth();
+  const competitionId = user?.competitionId ?? user?.competition?.id ?? user?.competition_id ?? null;
   const [matchId, setMatchId] = useState(null);
   const [state, setState] = useState(null);
   const [subjects, setSubjects] = useState(null);
@@ -25,26 +26,37 @@ export default function ControllerPage() {
 
   const loadAssignment = useCallback(async () => {
     setError(null);
+    if (!competitionId) {
+      setError("No competition assigned to this user.");
+      return;
+    }
     try {
       const [subjectResponse, competition, activeResponse] = await Promise.all([
         subjectsApi.list({}),
-        competitionsApi.get(user.competitionId),
-        matchesApi.list({ competitionId: user.competitionId, status: "IN_PROGRESS" }),
+        competitionsApi.get(competitionId),
+        matchesApi.list({ competitionId: competitionId, status: "IN_PROGRESS" }),
       ]);
-      const selectedSubjectIds = new Set(competition.subjectIds || []);
-      setSubjects(subjectResponse.data.filter((subject) => subject.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
-      let match = activeResponse.data[0];
+
+      const subjectList = Array.isArray(subjectResponse?.data) ? subjectResponse.data : [];
+      const selectedSubjectIds = new Set(competition?.subjectIds || []);
+      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
+
+      let match = Array.isArray(activeResponse?.data) ? activeResponse.data[0] : null;
       if (!match) {
-        const upcomingResponse = await matchesApi.list({ competitionId: user.competitionId, status: "UPCOMING" });
-        match = upcomingResponse.data[0];
+        const upcomingResponse = await matchesApi.list({ competitionId: competitionId, status: "UPCOMING" });
+        match = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data[0] : null;
       }
-      if (!match) throw new Error("No match is currently assigned to this competition.");
+      if (!match) {
+        setError("No match is currently assigned to this competition.");
+        setMatchId(null);
+        return;
+      }
       setMatchId(match.id);
     } catch (e) {
-      setError(e.message);
-      showToast(e.message, "error");
+      setError(e.message || "Unable to load controller assignment.");
+      showToast(e.message || "Unable to load controller assignment.", "error");
     }
-  }, [showToast, user.competitionId]);
+  }, [competitionId, showToast]);
 
   useEffect(() => {
     loadAssignment();
@@ -55,12 +67,18 @@ export default function ControllerPage() {
     return subscribeToLiveState(matchId, {
       asController: true,
       intervalMs: 1000,
-      onUpdate: setState,
-      onError: (e) => setError(e.message),
+      onUpdate: (nextState) => {
+        if (nextState) {
+          setError(null);
+          setState(nextState);
+        }
+      },
+      onError: (e) => setError(e.message || "Unable to refresh controller state."),
     });
   }, [matchId]);
 
   const toggleMode = useCallback(() => {
+    if (!matchId) return;
     const next = controllerMode === "NORMAL" ? "VIDEO" : "NORMAL";
     setControllerMode(next);
     controllerApi.setControllerMode(matchId, next).catch(() => {});
