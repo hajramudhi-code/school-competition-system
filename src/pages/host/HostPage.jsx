@@ -25,17 +25,18 @@ export default function HostPage() {
   const timeoutFiredRef = useRef(false);
   const latestMutationRef = useRef(0);
 
-  const closeQuestionView = useCallback((result, questionId) => {
+  const closeQuestionView = useCallback((result, questionId, serverState = null) => {
     setState((current) => {
-      if (!current) return current;
+      const base = serverState ?? current;
+      if (!base) return base;
       return {
-        ...current,
+        ...base,
         currentQuestion: null,
         videoQuestion: null,
         lastResult: {
           questionId,
           result,
-          schoolId: current.currentSchoolId,
+          schoolId: base.currentSchoolId ?? current?.currentSchoolId,
           timestamp: new Date().toISOString(),
         },
       };
@@ -62,15 +63,16 @@ export default function HostPage() {
     setBusy(true);
     try {
       const nextState = await hostApi.recordResult(matchId, questionId, result);
-      if (nextState) setState(nextState);
-      closeQuestionView(result, questionId);
-      refresh();
+      closeQuestionView(result, questionId, nextState ?? state);
+      if (!nextState) {
+        refresh();
+      }
     } catch (e) {
       showToast(e.message, "error");
     } finally {
       setBusy(false);
     }
-  }, [closeQuestionView, matchId, refresh, showToast, state?.currentQuestion, state?.questionMode, state?.videoQuestion]);
+  }, [closeQuestionView, matchId, refresh, showToast, state, state?.currentQuestion, state?.questionMode, state?.videoQuestion]);
 
   const loadAssignment = useCallback(async () => {
     setError(null);
