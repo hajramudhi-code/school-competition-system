@@ -337,6 +337,7 @@ input, select, textarea {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .host-score-card {
@@ -572,7 +573,7 @@ input, select, textarea {
   }
 
   .host-score-card {
-    padding: 10px 14px;
+    padding: 8px 12px;
   }
 
   .host-workspace,
@@ -584,12 +585,24 @@ input, select, textarea {
 
   .host-main-area,
   .host-question-area {
-    gap: 12px !important;
+    gap: 10px !important;
   }
 
   .host-page .card {
-    padding: 14px;
+    padding: 12px;
     border-radius: 10px;
+  }
+
+  .host-subject-panel,
+  .host-page .question-selector {
+    padding: 10px 12px;
+  }
+
+  .host-subject-panel h4,
+  .host-page .question-selector h4,
+  .host-video-questions h4 {
+    margin-bottom: 8px !important;
+    font-size: 11px !important;
   }
 
   .host-page .school-selector {
@@ -620,9 +633,37 @@ input, select, textarea {
     padding: 8px 10px;
   }
 
+  .host-question-area > .card:not(.question-selector) {
+    padding: 12px;
+  }
+
+  .host-question-area > .question-selector > div:last-child {
+    margin-top: 8px !important;
+    font-size: 10px !important;
+  }
+
+  .host-question-area > .question-selector > div:last-child span {
+    gap: 4px !important;
+  }
+
+  .host-question-area > .question-selector > div:last-child span > span {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
   .host-video-question {
     grid-template-columns: minmax(180px, 34%) minmax(0, 1fr) !important;
     gap: 12px !important;
+  }
+
+  .host-video-overlay-backdrop {
+    padding: 14px;
+  }
+
+  .host-video-overlay {
+    width: min(100%, 920px);
+    max-height: 94dvh;
+    padding: 28px 16px 16px;
   }
 
   .host-video-grid {
@@ -645,6 +686,56 @@ input, select, textarea {
 
   .host-scoreboard > div > div:nth-child(2) {
     font-size: 30px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) and (orientation: landscape) {
+  .host-content {
+    padding-top: 8px !important;
+    padding-bottom: 12px !important;
+    gap: 8px !important;
+  }
+
+  .host-main-area {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .host-normal-layout,
+  .host-video-layout {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 10px !important;
+    min-height: 0;
+  }
+
+  .host-subject-panel {
+    align-self: stretch;
+  }
+
+  .host-subject-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 6px;
+  }
+
+  .host-question-area {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .host-page .question-selector > div:first-of-type {
+    grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+  }
+
+  .host-page .question-selector .btn {
+    padding: 6px 0 !important;
+    font-size: 11px;
+  }
+
+  .host-empty-question {
+    min-height: 96px;
   }
 }
 

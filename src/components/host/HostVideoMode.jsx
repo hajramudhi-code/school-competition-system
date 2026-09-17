@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import VideoQuestionCard from "../questions/VideoQuestionCard";
-import HostControls from "./HostControls";
 import { getSubjectCode } from "../../utils/liveState";
 
 export default function HostVideoMode({
@@ -106,7 +105,6 @@ export default function HostVideoMode({
                     <i className="fas fa-xmark" aria-hidden="true" />
                   </button>
                 </div>
-                <HostControls timer={timer} />
               </div>
             </div>
           </section>
