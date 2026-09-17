@@ -2,16 +2,18 @@ import React from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import AnswerOptions from "../questions/AnswerOptions";
 
-export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer }) {
+export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer, lastResult }) {
+  const toneClass = lastResult?.result === "CORRECT" ? "has-result-correct" : lastResult?.result === "INCORRECT" ? "has-result-incorrect" : "";
+
   return (
     <div className={videoQuestion ? "controller-video-stage" : "controller-video-gallery"}>
       {videoQuestion ? (
         <div className="controller-video-frame">
           <VideoPlayer youtubeUrl={videoQuestion.youtubeUrl} autoplay square={false} />
-          <div className="controller-video-question-overlay">
+          <div className={`controller-video-question-overlay ${toneClass}`}>
             <p>{videoQuestion.text}</p>
             {videoQuestion.mode !== "MENTION" && <AnswerOptions question={videoQuestion} size="large" />}
-            {timer && timer.state !== "IDLE" && <TimerBar timer={timer} />}
+            {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>
       ) : videoQuestions.length ? (
@@ -38,12 +40,13 @@ export default function ControllerVideoMode({ videoQuestion, videoQuestions = []
   );
 }
 
-function TimerBar({ timer }) {
+function TimerBar({ timer, toneClass }) {
   const pct = timer.durationSeconds ? Math.max(0, (timer.remainingSeconds / timer.durationSeconds) * 100) : 0;
+  const accent = toneClass === "has-result-correct" ? "#22c55e" : toneClass === "has-result-incorrect" ? "#ef4444" : "#22d3ee";
   return (
     <div className="controller-video-timer">
       <span>{timer.remainingSeconds}s</span>
-      <div><i style={{ width: `${pct}%` }} /></div>
+      <div><i style={{ width: `${pct}%`, background: accent }} /></div>
     </div>
   );
 }

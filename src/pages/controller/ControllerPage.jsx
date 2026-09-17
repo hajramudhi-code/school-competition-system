@@ -133,9 +133,9 @@ export default function ControllerPage() {
             <SubjectCarousel subjects={subjects} selectedSubjectId={state.currentSubjectId} />
             {controllerMode === "NORMAL" && <QuestionNumberRow slots={getQuestionSlots(state)} selectedQuestionId={state.currentQuestion?.id} />}
             {controllerMode === "NORMAL" ? (
-              <ControllerNormalMode currentQuestion={state.currentQuestion} timer={state.timer} />
+              <ControllerNormalMode currentQuestion={state.currentQuestion} timer={state.timer} lastResult={state?.lastResult} />
             ) : (
-              <ControllerVideoMode videoQuestion={state.videoQuestion} videoQuestions={state.videoQuestions} timer={state.timer} />
+              <ControllerVideoMode videoQuestion={state.videoQuestion} videoQuestions={state.videoQuestions} timer={state.timer} lastResult={state?.lastResult} />
             )}
           </>
         )}
