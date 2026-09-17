@@ -1,6 +1,12 @@
 import React from "react";
 export default function QuestionPanel({ question, onDecision, busy }) {
-  if (!question) return null;
+  if (!question) {
+    return (
+      <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 180, color: "var(--text-muted)", textAlign: "center" }}>
+        Select a question slot to begin the round.
+      </div>
+    );
+  }
 
   const correctLabel =
     question.mode === "MULTIPLE_CHOICE"

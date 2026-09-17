@@ -853,10 +853,21 @@ input, select, textarea {
 .controller-page .controller-question-stage.has-question {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  width: 100vw;
+  height: 100vh;
+  z-index: 60;
   display: grid;
   place-items: center;
   background: rgba(11, 18, 31, .55);
+}
+
+.controller-page .controller-question-stage.has-question::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 18, 31, .68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .controller-normal-page .controller-question-row {
