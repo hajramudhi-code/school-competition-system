@@ -1194,6 +1194,52 @@ input, select, textarea {
   }
 }
 
+@media (max-height: 850px) {
+  .controller-page {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .controller-header {
+    min-height: 48px;
+    padding-block: 8px !important;
+  }
+
+  .controller-content {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px 16px 16px !important;
+    gap: 8px !important;
+  }
+
+  .controller-page .host-scoreboard {
+    min-height: 64px;
+  }
+
+  .controller-page .controller-subject-track {
+    min-height: 64px;
+    padding-block: 8px;
+  }
+
+  .controller-page .controller-question-row {
+    min-height: 190px;
+    row-gap: 6px;
+    column-gap: 8px;
+    padding-block: 8px;
+  }
+
+  .controller-page .controller-question-number {
+    min-height: 32px;
+    font-size: clamp(16px, 1.8vw, 22px);
+  }
+
+  .controller-content > .controller-question-stage,
+  .controller-content > .controller-video-stage,
+  .controller-content > .controller-video-gallery {
+    min-height: 0;
+  }
+}
+
 .controller-page .controller-fullscreen:hover {
   background: #123f70;
   color: #fff;
