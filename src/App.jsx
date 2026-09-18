@@ -27,7 +27,8 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
-          <Routes>
+          <AppErrorBoundary>
+            <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/staff/login" element={<StaffLogin />} />
@@ -67,9 +68,46 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-          </Routes>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </AppErrorBoundary>
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>
+  );
+}
+
+class AppErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+          <div className="card" style={{ maxWidth: 520, textAlign: "center" }}>
+            <h2>Something went wrong</h2>
+            <p style={{ margin: "12px 0 20px" }}>The page could not be displayed. Reload the page and try again.</p>
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>Reload page</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function NotFoundPage() {
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+      <div className="card" style={{ maxWidth: 520, textAlign: "center" }}>
+        <h2>Page not found</h2>
+        <p style={{ margin: "12px 0 20px" }}>The requested frontend page does not exist.</p>
+        <a className="btn btn-primary" href="/">Go home</a>
+      </div>
+    </div>
   );
 }

@@ -5,6 +5,27 @@ export function getSubjectCode(subject) {
 export const MAX_VISIBLE_QUESTION_SLOTS = 20;
 export const MAX_VISIBLE_VIDEO_QUESTIONS = 4;
 
+export function isLuckyQuestionSubject(subject) {
+  const identity = [
+    subject?.name,
+    subject?.code,
+    subject?.type,
+    subject?.category,
+    subject?.questionType,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return identity.includes("lucky");
+}
+
+export function getLuckyQuestionSubject(subjects = [], fallbackId = null) {
+  const luckySubject = subjects.find(isLuckyQuestionSubject);
+
+  return luckySubject || {
+    id: fallbackId || "lucky-question",
+    name: "LUCKY QUESTION",
+    status: "ENABLED",
+  };
+}
+
 export function getQuestionSlots(state) {
   const liveState = state?.data && !Array.isArray(state.data) ? state.data : state?.liveState || state;
   const slots = liveState?.questionSlots

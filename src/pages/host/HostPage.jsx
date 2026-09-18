@@ -8,7 +8,27 @@ import { LoadingState, ErrorState, useToast } from "../../components/common/inde
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
-import { getQuestionSlots, MAX_VISIBLE_VIDEO_QUESTIONS, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
+import { getLuckyQuestionSubject, getQuestionSlots, isLuckyQuestionSubject, MAX_VISIBLE_VIDEO_QUESTIONS, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
+
+function startOfDay(date) {
+  if (!date) return null;
+  const value = new Date(date);
+  if (Number.isNaN(value.getTime())) return null;
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function isFutureMatchDate(dateValue) {
+  if (!dateValue) return false;
+  const matchDate = startOfDay(dateValue);
+  const today = startOfDay(new Date());
+  if (!matchDate || !today) return false;
+  return matchDate.getTime() > today.getTime();
+}
+
+function isDateBlockedForCurrentHost(match) {
+  if (!match?.date) return false;
+  return isFutureMatchDate(match.date);
+}
 
 export default function HostPage() {
   const { user, logout } = useAuth();
@@ -27,6 +47,15 @@ export default function HostPage() {
   const timeoutFiredRef = useRef(false);
   const latestMutationRef = useRef(0);
   const dismissedQuestionRef = useRef(null);
+  const normalSubjectIdRef = useRef(null);
+  const registeredLuckySubject = (subjects || []).find(isLuckyQuestionSubject);
+  const luckySubject = getLuckyQuestionSubject(subjects || [], state?.currentSubjectId);
+
+  useEffect(() => {
+    if (state?.questionMode === "NORMAL" && state.currentSubjectId && !isLuckyQuestionSubject({ id: state.currentSubjectId, name: state.currentSubjectId })) {
+      normalSubjectIdRef.current = state.currentSubjectId;
+    }
+  }, [state?.currentSubjectId, state?.questionMode]);
 
   const closeQuestionView = useCallback((questionId) => {
     setState((current) => {
@@ -92,19 +121,29 @@ export default function HostPage() {
 
       const subjectList = Array.isArray(subjectResponse?.data) ? subjectResponse.data : [];
       const selectedSubjectIds = new Set(competition?.subjectIds || []);
-      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
+      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && (selectedSubjectIds.has(subject.id) || isLuckyQuestionSubject(subject))));
 
-      let match = Array.isArray(activeResponse?.data) ? activeResponse.data[0] : null;
+      const activeMatches = Array.isArray(activeResponse?.data) ? activeResponse.data : [];
+      const inProgressMatch = activeMatches.find((match) => !isDateBlockedForCurrentHost(match)) || activeMatches[0] || null;
+
+      let match = inProgressMatch;
       if (!match) {
         const upcomingResponse = await matchesApi.list({ competitionId: competitionId, status: "UPCOMING" });
-        match = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data[0] : null;
+        const upcomingMatches = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data : [];
+        match = upcomingMatches.find((candidate) => !isDateBlockedForCurrentHost(candidate)) || null;
       }
       if (!match) {
         const completedResponse = await matchesApi.list({ competitionId: competitionId, status: "COMPLETED" });
-        match = Array.isArray(completedResponse?.data) ? completedResponse.data[0] : null;
+        const completedMatches = Array.isArray(completedResponse?.data) ? completedResponse.data : [];
+        match = completedMatches[0] || null;
       }
       if (!match) {
-        setError("No match is currently assigned to this competition.");
+        setError("No match is currently available for this competition.");
+        setMatchId(null);
+        return;
+      }
+      if (isDateBlockedForCurrentHost(match)) {
+        setError(`The next available match is scheduled for ${match.date}. It will open on that date.`);
         setMatchId(null);
         return;
       }
@@ -121,16 +160,23 @@ export default function HostPage() {
   }, [loadAssignment]);
 
   useEffect(() => {
+    const id = setInterval(() => {
+      loadAssignment();
+    }, 15000);
+    return () => clearInterval(id);
+  }, [loadAssignment]);
+
+  useEffect(() => {
     refresh();
     const id = setInterval(refresh, 1000);
     return () => clearInterval(id);
   }, [refresh]);
 
   useEffect(() => {
-    if (state?.questionMode === "VIDEO" && state?.currentSubjectId) {
-      hostApi.listVideoQuestions(matchId, state.currentSubjectId).then((res) => setVideoQuestions((res.data || []).slice(0, MAX_VISIBLE_VIDEO_QUESTIONS)));
+    if (state?.questionMode === "VIDEO" && registeredLuckySubject?.id) {
+      hostApi.listVideoQuestions(matchId, registeredLuckySubject.id).then((res) => setVideoQuestions((res.data || []).slice(0, MAX_VISIBLE_VIDEO_QUESTIONS)));
     }
-  }, [matchId, state?.questionMode, state?.currentSubjectId]);
+  }, [matchId, registeredLuckySubject?.id, state?.questionMode]);
 
   useEffect(() => {
     if (state?.lastResult?.result !== "TIMEOUT") return;
@@ -158,6 +204,20 @@ export default function HostPage() {
     }
   }
 
+  async function switchQuestionMode() {
+    if (!matchId || !state || !matchStarted || matchEnded || busy) return;
+    const nextMode = state.questionMode === "NORMAL" ? "VIDEO" : "NORMAL";
+    if (nextMode === "VIDEO" && !registeredLuckySubject) {
+      showToast("Create and assign a Lucky Question subject before switching to video mode.", "error");
+      return;
+    }
+    await guarded(async () => {
+      await hostApi.setMode(matchId, nextMode);
+      const subjectId = nextMode === "VIDEO" ? registeredLuckySubject.id : normalSubjectIdRef.current;
+      return subjectId ? hostApi.selectSubject(matchId, subjectId) : hostApi.getLiveState(matchId);
+    });
+  }
+
   const updateFromMatchResponse = useCallback((response, fallbackMatchId) => {
     const liveState = normalizeLiveState(response);
     const nextMatchId = response?.matchId || liveState?.matchId || fallbackMatchId;
@@ -169,10 +229,10 @@ export default function HostPage() {
     return { liveState, nextMatchId };
   }, [matchId]);
 
-  const transitionToMatch = useCallback((response, fallbackMatchId) => {
+  const transitionToMatch = useCallback((response, fallbackMatchId, { preserveMatchId = false } = {}) => {
     const liveState = normalizeLiveState(response);
-    const nextMatchId = response?.matchId || liveState?.matchId || fallbackMatchId;
-    if (nextMatchId && nextMatchId !== matchId) setMatchId(nextMatchId);
+    const nextMatchId = preserveMatchId ? fallbackMatchId : (response?.matchId || liveState?.matchId || fallbackMatchId);
+    if (!preserveMatchId && nextMatchId && nextMatchId !== matchId) setMatchId(nextMatchId);
     setState(liveState);
     publishLiveState(nextMatchId, liveState);
     setMatchStarted(true);
@@ -184,6 +244,10 @@ export default function HostPage() {
 
   const startMatch = useCallback(async () => {
     if (!matchId || matchControlBusy) return;
+    if (state?.date && isFutureMatchDate(state.date)) {
+      showToast(`This match is scheduled for ${state.date}. It cannot start before that date.`, "error");
+      return;
+    }
     setMatchControlBusy(true);
     try {
       const response = await hostApi.startMatch(matchId);
@@ -193,7 +257,7 @@ export default function HostPage() {
     } finally {
       setMatchControlBusy(false);
     }
-  }, [matchControlBusy, matchId, showToast, transitionToMatch]);
+  }, [matchControlBusy, matchId, showToast, state?.date, transitionToMatch]);
 
   const endMatch = useCallback(async () => {
     if (!matchId || matchControlBusy || !matchStarted) return;
@@ -216,7 +280,12 @@ export default function HostPage() {
     setMatchControlBusy(true);
     try {
       const response = rematch ? await hostApi.rematch(matchId) : await hostApi.nextMatch(matchId);
-      transitionToMatch(response, matchId);
+      const nextDate = response?.date || normalizeLiveState(response)?.date;
+      if (nextDate && isFutureMatchDate(nextDate)) {
+        showToast(`The next match is scheduled for ${nextDate}. It will unlock on that date.`, "error");
+        return;
+      }
+      transitionToMatch(response, matchId, { preserveMatchId: Boolean(rematch) });
     } catch (e) {
       showToast(e.message, "error");
     } finally {
@@ -256,8 +325,8 @@ export default function HostPage() {
         <div className="host-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             className="btn btn-secondary"
-            disabled={!matchId || !state}
-            onClick={() => guarded(() => hostApi.setMode(matchId, state.questionMode === "NORMAL" ? "VIDEO" : "NORMAL"))}
+            disabled={!matchId || !state || !matchStarted || matchEnded}
+            onClick={switchQuestionMode}
           >
             {state?.questionMode === "VIDEO" ? "BONUS QN" : "NORMAL"}
           </button>
@@ -278,7 +347,7 @@ export default function HostPage() {
                 currentSchoolId={state.currentSchoolId}
                 questionsAnsweredInTurn={state.questionsAnsweredInTurn}
                 questionMode={state.questionMode}
-                onSelectSchool={(schoolId) => guarded(() => hostApi.selectSchool(matchId, schoolId))}
+                onSelectSchool={matchStarted && !matchEnded ? (schoolId) => guarded(() => hostApi.selectSchool(matchId, schoolId)) : undefined}
               />
             </div>
 
@@ -287,12 +356,12 @@ export default function HostPage() {
                 <HostNormalMode
                   subjects={subjects}
                   currentSubjectId={state.currentSubjectId}
-                  onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
+                  onSelectSubject={matchStarted && !matchEnded ? (id) => guarded(() => hostApi.selectSubject(matchId, id)) : undefined}
                   questionSlots={getQuestionSlots(state)}
-                  onSelectQuestion={(qid) => {
+                  onSelectQuestion={matchStarted && !matchEnded ? (qid) => {
                     dismissedQuestionRef.current = null;
                     guarded(() => hostApi.selectQuestion(matchId, qid));
-                  }}
+                  } : undefined}
                   currentQuestion={state.currentQuestion}
                   onDecision={(result) => submitDecision(result)}
                   onCloseQuestion={() => closeQuestionView(state.currentQuestion?.id)}
@@ -300,17 +369,19 @@ export default function HostPage() {
                   result={state.lastResult}
                   timer={state.timer}
                   onExpire={() => submitDecision("TIMEOUT")}
+                  canSelectSubject={matchStarted && !matchEnded}
+                  canSelectQuestion={matchStarted && !matchEnded}
                 />
               ) : (
                 <HostVideoMode
-                  subjects={subjects}
-                  currentSubjectId={state.currentSubjectId}
-                  onSelectSubject={(id) => guarded(() => hostApi.selectSubject(matchId, id))}
+                  subjects={[luckySubject]}
+                  currentSubjectId={luckySubject.id}
+                  onSelectSubject={matchStarted && !matchEnded ? (id) => guarded(() => hostApi.selectSubject(matchId, id)) : undefined}
                   videoQuestions={videoQuestions}
-                  onSelectQuestion={(qid) => {
+                  onSelectQuestion={matchStarted && !matchEnded ? (qid) => {
                     dismissedQuestionRef.current = null;
                     guarded(() => hostApi.selectQuestion(matchId, qid));
-                  }}
+                  } : undefined}
                   currentVideoQuestion={state.videoQuestion}
                   onDecision={(result) => submitDecision(result)}
                   onCloseQuestion={() => closeQuestionView(state.videoQuestion?.id)}
@@ -318,6 +389,8 @@ export default function HostPage() {
                   timer={state.timer}
                   onExpire={() => submitDecision("TIMEOUT")}
                   result={state.lastResult}
+                  canSelectSubject={matchStarted && !matchEnded}
+                  canSelectQuestion={matchStarted && !matchEnded}
                 />
               )}
 

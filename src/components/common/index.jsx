@@ -63,7 +63,7 @@ export function EmptyState({ title = "Nothing here yet", description, action }) 
   );
 }
 
-export function LogoUpload({ value, onChange, onFileChange, label = "Logo (optional)", maxBytes = 2 * 1024 * 1024, minDimension = 128, maxDimension = 2048, aspectRatio = 1, aspectTolerance = 0.15 }) {
+export function LogoUpload({ value, onChange, onFileChange, label = "Logo (optional)", maxBytes = 10 * 1024 * 1024, minDimension = null, maxDimension = null, aspectRatio = null, aspectTolerance = 0.15 }) {
   const [error, setError] = useState("");
 
   function handleChange(event) {
@@ -71,14 +71,14 @@ export function LogoUpload({ value, onChange, onFileChange, label = "Logo (optio
     if (!file) return;
     setError("");
     if (!file.type.startsWith("image/")) return setError("Choose an image file.");
-    if (file.size > maxBytes) return setError("Image must be 2 MB or smaller.");
+    if (file.size > maxBytes) return setError("Image must be 10 MB or smaller.");
 
     const reader = new FileReader();
     reader.onload = () => {
       const image = new Image();
       image.onload = () => {
         const ratio = image.width / image.height;
-        if (image.width < minDimension || image.height < minDimension || image.width > maxDimension || image.height > maxDimension) {
+        if (minDimension !== null && maxDimension !== null && (image.width < minDimension || image.height < minDimension || image.width > maxDimension || image.height > maxDimension)) {
           return setError(`Image dimensions must be between ${minDimension} and ${maxDimension} px.`);
         }
         if (aspectRatio !== null && Math.abs(ratio - aspectRatio) > aspectTolerance) return setError("Logo must use a square 1:1 aspect ratio.");
@@ -101,7 +101,7 @@ export function LogoUpload({ value, onChange, onFileChange, label = "Logo (optio
           <input type="file" accept="image/*" onChange={handleChange} style={{ display: "none" }} />
         </label>
       </div>
-      <p style={{ fontSize: 12, marginTop: 6 }}>PNG, JPG or WebP, up to 2 MB.</p>
+      <p style={{ fontSize: 12, marginTop: 6 }}>PNG, JPG or WebP, up to 10 MB.</p>
       {error && <span className="field-error">{error}</span>}
     </div>
   );

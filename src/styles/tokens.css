@@ -1044,7 +1044,7 @@ input, select, textarea {
   display: grid;
   place-items: center;
   background: rgba(11, 18, 31, .55);
-  padding: 24px;
+  padding: 0;
 }
 
 .controller-page .controller-question-stage.has-question::before {
@@ -1556,16 +1556,19 @@ input, select, textarea {
 }
 
 .controller-question-overlay {
-  width: min(100%, 1200px);
-  max-height: min(84vh, 760px);
+  width: 100%;
+  height: 100%;
+  max-height: none;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   z-index: 1;
-  padding: clamp(20px, 3vw, 42px);
-  border: 2px solid #20d4ff;
-  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 48px);
+  border: 0;
+  border-radius: 0;
   background: #ffffff;
-  box-shadow: 0 0 32px rgba(0, 184, 255, .4), inset 0 0 30px rgba(0, 115, 205, .18);
+  box-shadow: none;
   transition: box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
 }
 
@@ -1584,9 +1587,14 @@ input, select, textarea {
 .controller-question-content {
   display: flex;
   flex-direction: column;
-  gap: clamp(18px, 2vw, 24px);
+  gap: clamp(8px, 1.2vw, 14px);
+  width: min(100%, 1200px);
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  overflow-wrap: anywhere;
   text-align: center;
-  height: 100%;
+  height: auto;
   justify-content: center;
 }
 
@@ -1617,8 +1625,15 @@ input, select, textarea {
 
 .controller-question-content > p {
   margin: 0;
-  font-size: clamp(24px, 3.4vw, 42px) !important;
+  font-size: clamp(18px, 2.8vw, 36px) !important;
   font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.controller-question-content .answer-options-list.is-large .answer-option {
+  padding: clamp(6px, 1vh, 10px) 4px !important;
+  font-size: clamp(16px, 2vw, 26px) !important;
+  overflow-wrap: anywhere;
 }
 
 .controller-question-content > div:not(.card-elevated) {

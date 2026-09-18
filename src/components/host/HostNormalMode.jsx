@@ -2,14 +2,14 @@ import React from "react";
 import QuestionSelector from "../questions/QuestionSelector";
 import QuestionPanel from "../questions/QuestionPanel";
 
-export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, onCloseQuestion, busy, result, timer, onExpire }) {
+export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, onCloseQuestion, busy, result, timer, onExpire, canSelectSubject = false, canSelectQuestion = false }) {
   return (
     <div className="host-normal-layout">
       <div className="card host-subject-panel">
         <h4 style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.05em", marginBottom: 12 }}>SELECT SUBJECT</h4>
         <div className="host-subject-row">
           {subjects.map((s) => {
-            const disabled = s.status === "DISABLED";
+            const disabled = s.status === "DISABLED" || !canSelectSubject;
             const active = s.id === currentSubjectId;
             return (
               <button
@@ -27,7 +27,7 @@ export default function HostNormalMode({ subjects, currentSubjectId, onSelectSub
       </div>
 
       <div className="host-question-area">
-        {currentSubjectId ? <QuestionSelector slots={questionSlots} onSelect={onSelectQuestion} columns={5} /> : <div className="card host-empty-question">Select a subject to load its questions.</div>}
+        {currentSubjectId ? <QuestionSelector slots={questionSlots} onSelect={canSelectQuestion ? onSelectQuestion : undefined} columns={5} /> : <div className="card host-empty-question">Select a subject to load its questions.</div>}
         <QuestionPanel question={currentQuestion} onDecision={onDecision} onClose={onCloseQuestion} busy={busy} result={result} timer={timer} onExpire={onExpire} />
       </div>
     </div>

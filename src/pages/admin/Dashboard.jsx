@@ -21,7 +21,7 @@ export default function Dashboard() {
     setError(null);
     dashboardApi
       .getAdminSummary()
-      .then(setData)
+      .then((payload) => setData(normalizeDashboard(payload)))
       .catch((e) => setError(e.message));
   }
   usePolling(load);
@@ -138,3 +138,13 @@ export default function Dashboard() {
 
 const th = { padding: "8px 6px" };
 const td = { padding: "10px 6px", color: "var(--text-secondary)" };
+
+function normalizeDashboard(payload) {
+  const data = payload?.data && !Array.isArray(payload.data) ? payload.data : payload || {};
+  return {
+    ...data,
+    upcomingMatchList: Array.isArray(data.upcomingMatchList) ? data.upcomingMatchList : [],
+    recentResults: Array.isArray(data.recentResults) ? data.recentResults : [],
+    competitionSummaries: Array.isArray(data.competitionSummaries) ? data.competitionSummaries : [],
+  };
+}

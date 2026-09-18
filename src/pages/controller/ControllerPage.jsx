@@ -11,7 +11,7 @@ import ControllerVideoMode from "../../components/controller/ControllerVideoMode
 import ResultAnimation from "../../components/controller/ResultAnimation";
 import SubjectCarousel from "../../components/controller/SubjectCarousel";
 import QuestionNumberRow from "../../components/controller/QuestionNumberRow";
-import { getQuestionSlots } from "../../utils/liveState";
+import { getLuckyQuestionSubject, getQuestionSlots, isLuckyQuestionSubject } from "../../utils/liveState";
 
 export default function ControllerPage() {
   const { user, logout } = useAuth();
@@ -23,6 +23,7 @@ export default function ControllerPage() {
   const [error, setError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { showToast } = useToast();
+  const luckySubject = getLuckyQuestionSubject(subjects || [], state?.currentSubjectId);
 
   const loadAssignment = useCallback(async () => {
     setError(null);
@@ -41,7 +42,7 @@ export default function ControllerPage() {
       const competitionData = competition?.data || competition?.competition || competition;
       const competitionSubjects = Array.isArray(competitionData?.subjects) ? competitionData.subjects : normalizeCollection(competitionData?.subjects);
       const selectedSubjectIds = new Set((competitionData?.subjectIds || competitionData?.subject_ids || competitionSubjects.map((subject) => subject.id)).map(String));
-      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(String(subject.id))));
+      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && (selectedSubjectIds.has(String(subject.id)) || isLuckyQuestionSubject(subject))));
 
       let match = normalizeCollection(activeResponse)[0] || null;
       if (!match) {
@@ -149,7 +150,7 @@ export default function ControllerPage() {
         {error ? <ErrorState message={error} onRetry={loadAssignment} /> : !state || !subjects ? <LoadingState label="Loading public display..." /> : (
           <>
             <ScoreBoard schoolA={state.schoolA} schoolB={state.schoolB} currentSchoolId={state.currentSchoolId} size="large" />
-            <SubjectCarousel subjects={subjects} selectedSubjectId={state.currentSubjectId} />
+            <SubjectCarousel subjects={controllerMode === "VIDEO" ? [luckySubject] : subjects} selectedSubjectId={controllerMode === "VIDEO" ? luckySubject.id : state.currentSubjectId} />
             {controllerMode === "NORMAL" && <QuestionNumberRow slots={getQuestionSlots(state)} selectedQuestionId={state.currentQuestion?.id} />}
             {controllerMode === "NORMAL" ? (
               <ControllerNormalMode currentQuestion={state.currentQuestion} timer={state.timer} lastResult={state?.lastResult} />

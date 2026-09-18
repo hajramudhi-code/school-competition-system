@@ -17,6 +17,8 @@ export default function HostVideoMode({
   timer,
   onExpire,
   result,
+  canSelectSubject = false,
+  canSelectQuestion = false,
 }) {
   const [overlayOpen, setOverlayOpen] = useState(Boolean(currentVideoQuestion));
   const [selectedQuestionId, setSelectedQuestionId] = useState(currentVideoQuestion?.id || null);
@@ -35,10 +37,10 @@ export default function HostVideoMode({
   return (
     <div className="host-video-layout">
       <div className="card host-subject-panel">
-        <h4 style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.05em", marginBottom: 12 }}>SELECT SUBJECT</h4>
+        <h4 style={{ fontSize: 13, color: "var(--text-muted)", letterSpacing: "0.05em", marginBottom: 12 }}>LUCKY QUESTION</h4>
         <div className="host-subject-row">
           {subjects.map((s) => {
-            const disabled = s.status === "DISABLED";
+            const disabled = s.status === "DISABLED" || !canSelectSubject;
             const active = s.id === currentSubjectId;
             return (
               <button
@@ -71,7 +73,7 @@ export default function HostVideoMode({
                   question={q}
                   slot={q.slot}
                   status={q.id === selectedQuestionId || q.id === currentVideoQuestion?.id ? "SELECTED" : q.slotStatus}
-                  onSelect={selectQuestion}
+                  onSelect={canSelectQuestion ? selectQuestion : undefined}
                 />
               ))}
             </div>

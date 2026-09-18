@@ -59,9 +59,9 @@ export default function Results() {
               </tr>
             </thead>
             <tbody>
-              {results.map((r) => (
+              {results.map((r, index) => (
                 <tr key={r.matchId} style={{ borderTop: "1px solid var(--border-color)" }}>
-                  <td style={td}>{r.matchId}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{getMatchDisplayName(r, index)}</td>
                   <td style={td}>{r.schoolA.name}</td>
                   <td style={td}>
                     {r.schoolA.score} – {r.schoolB.score}
@@ -82,3 +82,12 @@ export default function Results() {
 
 const th = { padding: "12px 16px", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 };
 const td = { padding: "12px 16px" };
+
+function getMatchDisplayName(result, index) {
+  if (result.matchLabel) return result.matchLabel;
+  if (result.matchName) return result.matchName;
+  if (result.matchNumber !== undefined && result.matchNumber !== null) {
+    return `MATCH ${String(result.matchNumber).padStart(3, "0")}`;
+  }
+  return `MATCH ${String(index + 1).padStart(3, "0")}`;
+}

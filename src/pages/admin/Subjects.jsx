@@ -65,6 +65,7 @@ export default function Subjects() {
               <tr style={{ textAlign: "left", background: "var(--bg-card-elevated)" }}>
                 <th style={th}>#</th>
                 <th style={th}>Subject</th>
+                <th style={th}>Code</th>
                 <th style={th}>Status</th>
                 <th style={th}>Registered</th>
                 <th style={th}>Updated</th>
@@ -76,6 +77,7 @@ export default function Subjects() {
                 <tr key={s.id} style={{ borderTop: "1px solid var(--border-color)" }}>
                   <td style={td}>{subjects.indexOf(s) + 1}</td>
                   <td style={{ ...td, opacity: s.status === "DISABLED" ? 0.5 : 1 }}>{s.name}</td>
+                  <td style={{ ...td, fontWeight: 700, letterSpacing: "0.04em" }}>{s.code || "-"}</td>
                   <td style={td}>
                     <StatusBadge status={s.status} />
                   </td>
@@ -122,6 +124,7 @@ function SubjectViewModal({ subject, onClose }) {
     <Modal title="Subject Details" onClose={onClose}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Row label="Name" value={subject.name} />
+        <Row label="Code" value={subject.code || "-"} />
         <Row label="Status" value={subject.status} />
         <Row label="Registered" value={formatDate(subject.createdAt)} />
         <Row label="Updated" value={formatDate(subject.updatedAt || subject.createdAt)} />
@@ -134,6 +137,7 @@ function SubjectViewModal({ subject, onClose }) {
 function SubjectFormModal({ subject, onClose, onSaved }) {
   const isEdit = !!subject.id;
   const [name, setName] = useState(subject.name || "");
+  const [code, setCode] = useState(subject.code || "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const { showToast } = useToast();
@@ -141,11 +145,14 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
   async function submit(e) {
     e.preventDefault();
     if (!name.trim()) return setError("Subject name is required.");
+    if (!isEdit && !code.trim()) return setError("Subject code is required.");
     setBusy(true);
     setError("");
     try {
-      if (isEdit) await subjectsApi.update(subject.id, { name });
-      else await subjectsApi.create({ name });
+      const payload = { name: name.trim() };
+      if (code.trim()) payload.code = code.trim().toUpperCase();
+      if (isEdit) await subjectsApi.update(subject.id, payload);
+      else await subjectsApi.create(payload);
       showToast(isEdit ? "Subject updated" : "Subject added", "success");
       onSaved();
     } catch (e) {
@@ -161,6 +168,19 @@ function SubjectFormModal({ subject, onClose, onSaved }) {
         <div>
           <label className="field-label">Subject Name</label>
           <input className={`input ${error ? "has-error" : ""}`} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        </div>
+        <div>
+          <label className="field-label">Subject Code</label>
+          <input
+            className={`input ${error ? "has-error" : ""}`}
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="e.g. MATH or LUCKY"
+            maxLength={20}
+          />
+          <small style={{ display: "block", marginTop: 6, color: "var(--text-muted)" }}>
+            Use <strong>LUCKY</strong> for the Lucky Question subject.
+          </small>
         </div>
         {error && <span className="field-error">{error}</span>}
         <button className="btn btn-primary" disabled={busy}>
