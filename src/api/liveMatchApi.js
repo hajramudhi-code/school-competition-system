@@ -2,7 +2,20 @@ import { apiClient } from "./client";
 import { toQuery } from "./schoolsApi";
 
 export function normalizeLiveState(payload) {
-  return payload?.liveState || payload?.state || payload?.data || payload;
+  let state = payload;
+  while (state && !state.matchId && !state.schoolA && !state.schoolB && !state.currentQuestion && !state.questionSlots) {
+    const nested = state.liveState || state.state || state.data;
+    if (!nested || nested === state) break;
+    state = nested;
+  }
+  return state;
+}
+
+export function normalizeCollection(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
 }
 
 const LIVE_STATE_STORAGE_KEY = "school-competition-live-state";
@@ -44,6 +57,13 @@ export function subscribeToLocalLiveState(matchId, onUpdate) {
   window.addEventListener("storage", handleStorage);
   const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(LIVE_STATE_CHANNEL) : null;
   channel?.addEventListener("message", (event) => handleMessage(event.data));
+
+  try {
+    const saved = window.localStorage.getItem(LIVE_STATE_STORAGE_KEY);
+    if (saved) handleMessage(JSON.parse(saved));
+  } catch {
+    // Ignore unavailable or malformed saved state.
+  }
 
   return () => {
     window.removeEventListener("storage", handleStorage);
@@ -91,7 +111,7 @@ export function subscribeToLiveState(matchId, { asController = false, intervalMs
         ? await controllerApi.getPublicState(matchId)
         : await hostApi.getLiveState(matchId);
 
-      if (!cancelled && state?.matchId === String(matchId)) onUpdate?.(state);
+      if (!cancelled && state && (!state.matchId || String(state.matchId) === String(matchId))) onUpdate?.(state);
     } catch (err) {
       if (!cancelled) onError?.(err);
     } finally {

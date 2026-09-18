@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { matchesApi } from "../../api/matchesApi";
 import { competitionsApi } from "../../api/competitionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
-import { controllerApi, normalizeLiveState, subscribeToLiveState, subscribeToLocalLiveState } from "../../api/liveMatchApi";
+import { controllerApi, normalizeCollection, normalizeLiveState, subscribeToLiveState, subscribeToLocalLiveState } from "../../api/liveMatchApi";
 import { LoadingState, ErrorState, useToast } from "../../components/common/index.jsx";
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import ControllerNormalMode from "../../components/controller/ControllerNormalMode";
@@ -37,18 +37,18 @@ export default function ControllerPage() {
         matchesApi.list({ competitionId: competitionId, status: "IN_PROGRESS" }),
       ]);
 
-      const subjectList = Array.isArray(subjectResponse?.data) ? subjectResponse.data : [];
-      const selectedSubjectIds = new Set(competition?.subjectIds || []);
+      const subjectList = normalizeCollection(subjectResponse);
+      const selectedSubjectIds = new Set(competition?.subjectIds || competition?.subjects?.map((subject) => subject.id) || []);
       setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
 
-      let match = Array.isArray(activeResponse?.data) ? activeResponse.data[0] : null;
+      let match = normalizeCollection(activeResponse)[0] || null;
       if (!match) {
         const upcomingResponse = await matchesApi.list({ competitionId: competitionId, status: "UPCOMING" });
-        match = Array.isArray(upcomingResponse?.data) ? upcomingResponse.data[0] : null;
+        match = normalizeCollection(upcomingResponse)[0] || null;
       }
       if (!match) {
         const completedResponse = await matchesApi.list({ competitionId: competitionId, status: "COMPLETED" });
-        match = Array.isArray(completedResponse?.data) ? completedResponse.data[0] : null;
+        match = normalizeCollection(completedResponse)[0] || null;
       }
       if (!match) {
         setError("No match is currently assigned to this competition.");
@@ -75,7 +75,7 @@ export default function ControllerPage() {
     if (!matchId) return undefined;
     const applyState = (nextState) => {
       const liveState = normalizeLiveState(nextState);
-      if (liveState?.matchId === String(matchId)) {
+      if (!liveState?.matchId || String(liveState.matchId) === String(matchId)) {
         setError(null);
         setState(liveState);
       }

@@ -32,10 +32,12 @@ export default function HostPage() {
   const closeQuestionView = useCallback((questionId) => {
     setState((current) => {
       if (!current) return current;
-      return { ...current, currentQuestion: null, videoQuestion: null };
+      const nextState = { ...current, currentQuestion: null, videoQuestion: null };
+      publishLiveState(matchId, nextState);
+      return nextState;
     });
     dismissedQuestionRef.current = questionId;
-  }, []);
+  }, [matchId]);
 
   const refresh = useCallback(() => {
     if (!matchId) return;
