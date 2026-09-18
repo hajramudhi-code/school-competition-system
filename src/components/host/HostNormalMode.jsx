@@ -2,7 +2,7 @@ import React from "react";
 import QuestionSelector from "../questions/QuestionSelector";
 import QuestionPanel from "../questions/QuestionPanel";
 
-export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, onCloseQuestion, busy, result }) {
+export default function HostNormalMode({ subjects, currentSubjectId, onSelectSubject, questionSlots, onSelectQuestion, currentQuestion, onDecision, onCloseQuestion, busy, result, timer, onExpire }) {
   return (
     <div className="host-normal-layout">
       <div className="card host-subject-panel">
@@ -28,7 +28,7 @@ export default function HostNormalMode({ subjects, currentSubjectId, onSelectSub
 
       <div className="host-question-area">
         {currentSubjectId ? <QuestionSelector slots={questionSlots} onSelect={onSelectQuestion} columns={5} /> : <div className="card host-empty-question">Select a subject to load its questions.</div>}
-        <QuestionPanel question={currentQuestion} onDecision={onDecision} onClose={onCloseQuestion} busy={busy} result={result} />
+        <QuestionPanel question={currentQuestion} onDecision={onDecision} onClose={onCloseQuestion} busy={busy} result={result} timer={timer} onExpire={onExpire} />
       </div>
     </div>
   );

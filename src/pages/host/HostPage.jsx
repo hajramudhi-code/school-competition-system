@@ -8,7 +8,6 @@ import { LoadingState, ErrorState, useToast } from "../../components/common/inde
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
-import HostControls from "../../components/host/HostControls";
 import { getQuestionSlots, MAX_VISIBLE_VIDEO_QUESTIONS, MAX_VISIBLE_QUESTION_SLOTS } from "../../utils/liveState";
 
 export default function HostPage() {
@@ -299,6 +298,8 @@ export default function HostPage() {
                   onCloseQuestion={() => closeQuestionView(state.currentQuestion?.id)}
                   busy={busy}
                   result={state.lastResult}
+                  timer={state.timer}
+                  onExpire={() => submitDecision("TIMEOUT")}
                 />
               ) : (
                 <HostVideoMode
@@ -315,14 +316,11 @@ export default function HostPage() {
                   onCloseQuestion={() => closeQuestionView(state.videoQuestion?.id)}
                   busy={busy}
                   timer={state.timer}
+                  onExpire={() => submitDecision("TIMEOUT")}
                   result={state.lastResult}
                 />
               )}
 
-              {(state.currentQuestion || state.videoQuestion)
-                && state.lastResult?.questionId !== (state.currentQuestion?.id || state.videoQuestion?.id) && (
-                <HostControls timer={state.timer} disabled={busy} onExpire={() => submitDecision("TIMEOUT")} />
-              )}
             </div>
           </>
         )}

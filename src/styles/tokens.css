@@ -1100,25 +1100,62 @@ input, select, textarea {
 }
 
 @media (min-width: 1400px) and (min-height: 700px) {
+  .controller-page {
+    min-height: 100dvh;
+    height: auto;
+    overflow-y: auto;
+  }
+
   .controller-content {
-    padding: 14px 32px 58px !important;
-    gap: 14px !important;
+    min-height: calc(100dvh - 62px);
+    overflow: visible;
+    padding: clamp(18px, 2.2vh, 34px) clamp(32px, 4vw, 96px) 72px !important;
+    gap: clamp(24px, 3.2vh, 46px) !important;
   }
 
   .controller-content > .host-scoreboard {
     flex: 0 0 auto;
+    width: min(100%, 1640px);
   }
 
   .controller-content > .controller-subject-carousel,
   .controller-content > .controller-question-row {
     flex: 0 0 auto;
+    width: min(100%, 1640px);
   }
 
   .controller-content > .controller-question-stage,
   .controller-content > .controller-video-stage,
   .controller-content > .controller-video-gallery {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 1 auto;
+    min-height: clamp(300px, 34vh, 560px);
+    width: min(100%, 1640px);
+  }
+
+  .controller-page .controller-score-school-name,
+  .controller-page .controller-score-value {
+    font-size: clamp(38px, 3.4vw, 76px);
+  }
+
+  .controller-page .controller-question-number {
+    min-height: clamp(58px, 6vh, 86px);
+    font-size: clamp(22px, 1.8vw, 32px);
+  }
+
+  .controller-page .controller-question-row {
+    row-gap: clamp(16px, 2vh, 28px);
+    column-gap: clamp(10px, 1.2vw, 20px);
+    padding-top: clamp(10px, 1.4vh, 18px);
+    padding-bottom: clamp(10px, 1.4vh, 18px);
+  }
+
+  .controller-page .controller-question-overlay {
+    max-height: none;
+    min-height: min(58vh, 680px);
+  }
+
+  .controller-page .controller-question-content > p {
+    font-size: clamp(30px, 3.2vw, 58px) !important;
   }
 }
 
@@ -1809,6 +1846,14 @@ input, select, textarea {
   color: #111827 !important;
 }
 
+.landing-kicker {
+  color: #111827 !important;
+}
+
+.landing-brand span:last-child {
+  color: var(--text-secondary) !important;
+}
+
 .landing-main {
   background: var(--bg-main);
   background-image: none;
@@ -1851,6 +1896,25 @@ input, select, textarea {
   filter: none;
   background: var(--bg-card);
   text-shadow: none;
+}
+
+.landing-trophy {
+  min-height: 184px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-card);
+  box-shadow: 0 8px 24px rgba(31, 41, 51, .08);
+}
+
+.landing-trophy .trophy-cup {
+  color: var(--warning) !important;
+  border-color: var(--warning) !important;
+}
+
+@media (max-width: 720px) {
+  .landing-trophy {
+    min-height: 66px;
+  }
 }
 
 .controller-page {

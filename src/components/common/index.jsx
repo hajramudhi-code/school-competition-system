@@ -81,7 +81,7 @@ export function LogoUpload({ value, onChange, onFileChange, label = "Logo (optio
         if (image.width < minDimension || image.height < minDimension || image.width > maxDimension || image.height > maxDimension) {
           return setError(`Image dimensions must be between ${minDimension} and ${maxDimension} px.`);
         }
-        if (Math.abs(ratio - aspectRatio) > aspectTolerance) return setError("Logo must use a square 1:1 aspect ratio.");
+        if (aspectRatio !== null && Math.abs(ratio - aspectRatio) > aspectTolerance) return setError("Logo must use a square 1:1 aspect ratio.");
         onFileChange?.(file);
         onChange(reader.result);
       };

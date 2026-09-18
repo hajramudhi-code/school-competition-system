@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import VideoPlayer from "../questions/VideoPlayer";
 import VideoQuestionCard from "../questions/VideoQuestionCard";
+import HostControls from "./HostControls";
 import { MAX_VISIBLE_VIDEO_QUESTIONS } from "../../utils/liveState";
 
 export default function HostVideoMode({
@@ -14,6 +15,7 @@ export default function HostVideoMode({
   onCloseQuestion,
   busy,
   timer,
+  onExpire,
   result,
 }) {
   const [overlayOpen, setOverlayOpen] = useState(Boolean(currentVideoQuestion));
@@ -94,20 +96,24 @@ export default function HostVideoMode({
                   <span style={{ fontSize: 12, color: "var(--text-muted)" }}>QUESTION ({currentVideoQuestion.marks} marks)</span>
                   <p style={{ color: "var(--text-main)", fontSize: 15, marginTop: 4 }}>{currentVideoQuestion.text}</p>
                 </div>
+                <div className="card-elevated" style={{ padding: 10 }}>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>CORRECT ANSWER</span>
+                  <p style={{ color: "var(--success)", fontWeight: 700, marginTop: 4 }}>
+                    {currentVideoQuestion.mode === "MULTIPLE_CHOICE"
+                      ? `${currentVideoQuestion.correctAnswer}. ${currentVideoQuestion[`option${currentVideoQuestion.correctAnswer}`]}`
+                      : currentVideoQuestion.correctAnswer}
+                  </p>
+                </div>
                 {result?.questionId === currentVideoQuestion.id ? (
-                  <div className="card-elevated" style={{ padding: 10 }}>
-                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>CORRECT ANSWER</span>
-                    <p style={{ color: "var(--success)", fontWeight: 700, marginTop: 4 }}>
-                      {currentVideoQuestion.mode === "MULTIPLE_CHOICE"
-                        ? `${currentVideoQuestion.correctAnswer}. ${currentVideoQuestion[`option${currentVideoQuestion.correctAnswer}`]}`
-                        : currentVideoQuestion.correctAnswer}
-                    </p>
+                  <div style={{ color: result.result === "CORRECT" ? "var(--success)" : "var(--danger)", fontWeight: 700, textAlign: "center" }}>
+                    RESULT RECORDED: {result.result}
                   </div>
                 ) : (
                   <button className="btn btn-success" style={{ width: "100%", padding: "12px 0" }} disabled={busy} onClick={() => onDecision("CORRECT")}>
                     <i className="fas fa-check" aria-hidden="true" /> CORRECT
                   </button>
                 )}
+                {timer && timer.state !== "IDLE" && <HostControls timer={timer} onExpire={onExpire} />}
               </div>
             </div>
           </section>

@@ -314,7 +314,7 @@ function SponsorFormModal({ sponsor, onClose, onSaved, showToast }) {
           <label className="field-label">Sponsor Name</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zanzibar Telecom" autoFocus />
         </div>
-        <LogoUpload value={logoUrl} onChange={setLogoUrl} onFileChange={setLogoFile} label="Sponsor logo" />
+        <LogoUpload value={logoUrl} onChange={setLogoUrl} onFileChange={setLogoFile} label="Sponsor logo" aspectRatio={null} />
         {error && <span className="field-error">{error}</span>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Saving..." : "Save Sponsor"}</button>
       </form>

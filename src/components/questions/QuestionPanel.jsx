@@ -1,5 +1,7 @@
 import React from "react";
-export default function QuestionPanel({ question, onDecision, onClose, busy, result }) {
+import HostControls from "../host/HostControls";
+
+export default function QuestionPanel({ question, onDecision, onClose, busy, result, timer, onExpire }) {
   if (!question) {
     return (
       <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 180, color: "var(--text-muted)", textAlign: "center" }}>
@@ -26,16 +28,20 @@ export default function QuestionPanel({ question, onDecision, onClose, busy, res
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>QUESTION ({question.marks} marks)</span>
             <p style={{ color: "var(--text-main)", fontSize: 16, marginTop: 4 }}>{question.text}</p>
           </div>
+          <div className="card-elevated" style={{ padding: 12 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>CORRECT ANSWER</span>
+            <p style={{ color: "var(--success)", fontWeight: 700, marginTop: 4 }}>{correctLabel}</p>
+          </div>
           {revealed ? (
-            <div className="card-elevated" style={{ padding: 12 }}>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>CORRECT ANSWER</span>
-              <p style={{ color: "var(--success)", fontWeight: 700, marginTop: 4 }}>{correctLabel}</p>
+            <div style={{ color: result.result === "CORRECT" ? "var(--success)" : "var(--danger)", fontWeight: 700, textAlign: "center" }}>
+              RESULT RECORDED: {result.result}
             </div>
           ) : (
             <button className="btn btn-success" style={{ padding: "14px 0", fontSize: 15 }} disabled={busy} onClick={() => onDecision("CORRECT")}>
               <i className="fas fa-check" aria-hidden="true" /> CORRECT
             </button>
           )}
+          {timer && timer.state !== "IDLE" && <HostControls timer={timer} onExpire={onExpire} />}
         </div>
       </section>
     </div>
