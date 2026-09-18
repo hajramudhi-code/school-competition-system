@@ -3,9 +3,14 @@ import { toQuery } from "./schoolsApi";
 
 export function normalizeLiveState(payload) {
   let state = payload;
-  while (state && !state.matchId && !state.schoolA && !state.schoolB && !state.currentQuestion && !state.questionSlots) {
-    const nested = state.liveState || state.state || state.data;
+  while (state && typeof state === "object") {
+    const nested = state.liveState || state.state || (state.data && !Array.isArray(state.data) ? state.data : null);
     if (!nested || nested === state) break;
+    if (nested.matchId || nested.schoolA || nested.schoolB || nested.currentQuestion || nested.questionSlots) {
+      state = nested;
+      continue;
+    }
+    if (state.matchId || state.schoolA || state.schoolB || state.currentQuestion || state.questionSlots) break;
     state = nested;
   }
   return state;
@@ -15,6 +20,8 @@ export function normalizeCollection(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.results)) return payload.results;
+  if (payload?.data && payload.data !== payload) return normalizeCollection(payload.data);
+  if (payload?.results && payload.results !== payload) return normalizeCollection(payload.results);
   return [];
 }
 

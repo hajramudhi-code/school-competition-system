@@ -38,8 +38,10 @@ export default function ControllerPage() {
       ]);
 
       const subjectList = normalizeCollection(subjectResponse);
-      const selectedSubjectIds = new Set(competition?.subjectIds || competition?.subjects?.map((subject) => subject.id) || []);
-      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(subject.id)));
+      const competitionData = competition?.data || competition?.competition || competition;
+      const competitionSubjects = Array.isArray(competitionData?.subjects) ? competitionData.subjects : normalizeCollection(competitionData?.subjects);
+      const selectedSubjectIds = new Set((competitionData?.subjectIds || competitionData?.subject_ids || competitionSubjects.map((subject) => subject.id)).map(String));
+      setSubjects(subjectList.filter((subject) => subject?.status === "ENABLED" && selectedSubjectIds.has(String(subject.id))));
 
       let match = normalizeCollection(activeResponse)[0] || null;
       if (!match) {
