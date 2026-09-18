@@ -1847,7 +1847,7 @@ input, select, textarea {
 }
 
 .landing-kicker {
-  color: #111827 !important;
+  color: var(--blue-primary) !important;
 }
 
 .landing-brand span:last-child {
@@ -1899,11 +1899,11 @@ input, select, textarea {
 }
 
 .landing-trophy {
-  min-height: 184px;
-  border: 1px solid var(--border-color);
+  min-height: 0;
+  border: 0;
   border-radius: 18px;
-  background: var(--bg-card);
-  box-shadow: 0 8px 24px rgba(31, 41, 51, .08);
+  background: transparent;
+  box-shadow: none;
 }
 
 .landing-trophy .trophy-cup {
