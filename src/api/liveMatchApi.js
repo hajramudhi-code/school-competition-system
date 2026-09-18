@@ -1,9 +1,59 @@
 import { apiClient } from "./client";
 import { toQuery } from "./schoolsApi";
 
+export function normalizeLiveState(payload) {
+  return payload?.liveState || payload?.state || payload?.data || payload;
+}
+
+const LIVE_STATE_STORAGE_KEY = "school-competition-live-state";
+const LIVE_STATE_CHANNEL = "school-competition-live-state";
+
+export function publishLiveState(matchId, payload) {
+  const state = normalizeLiveState(payload);
+  if (!state || String(state.matchId) !== String(matchId)) return;
+
+  const message = { matchId: String(matchId), state, timestamp: Date.now() };
+  try {
+    window.localStorage.setItem(LIVE_STATE_STORAGE_KEY, JSON.stringify(message));
+  } catch {
+    // Storage may be unavailable in a restricted browser context.
+  }
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel(LIVE_STATE_CHANNEL);
+    channel.postMessage(message);
+    channel.close();
+  }
+}
+
+export function subscribeToLocalLiveState(matchId, onUpdate) {
+  const handleMessage = (message) => {
+    if (String(message?.matchId) !== String(matchId)) return;
+    const state = normalizeLiveState(message?.state);
+    if (state) onUpdate?.(state);
+  };
+
+  const handleStorage = (event) => {
+    if (event.key !== LIVE_STATE_STORAGE_KEY || !event.newValue) return;
+    try {
+      handleMessage(JSON.parse(event.newValue));
+    } catch {
+      // Ignore malformed browser storage events.
+    }
+  };
+
+  window.addEventListener("storage", handleStorage);
+  const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(LIVE_STATE_CHANNEL) : null;
+  channel?.addEventListener("message", (event) => handleMessage(event.data));
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    channel?.close();
+  };
+}
+
 // ---- Host Control API (spec section 12) ----
 export const hostApi = {
-  getLiveState: (matchId) => apiClient.get(`/matches/${matchId}/live-state`),
+  getLiveState: async (matchId) => normalizeLiveState(await apiClient.get(`/matches/${matchId}/live-state`)),
   selectSchool: (matchId, schoolId) => apiClient.post(`/matches/${matchId}/select-school`, { schoolId }),
   selectSubject: (matchId, subjectId) => apiClient.post(`/matches/${matchId}/select-subject`, { subjectId }),
   selectQuestion: (matchId, questionId) => apiClient.post(`/matches/${matchId}/select-question`, { questionId }),
@@ -22,7 +72,7 @@ export const hostApi = {
 
 // ---- Controller / Public Display API (spec section 13) ----
 export const controllerApi = {
-  getPublicState: (matchId) => apiClient.get(`/matches/${matchId}/public-state`),
+  getPublicState: async (matchId) => normalizeLiveState(await apiClient.get(`/matches/${matchId}/public-state`)),
   setControllerMode: (matchId, mode) => apiClient.post(`/matches/${matchId}/controller-mode`, { mode }),
 };
 
@@ -41,7 +91,7 @@ export function subscribeToLiveState(matchId, { asController = false, intervalMs
         ? await controllerApi.getPublicState(matchId)
         : await hostApi.getLiveState(matchId);
 
-      if (!cancelled && state) onUpdate?.(state);
+      if (!cancelled && state?.matchId === String(matchId)) onUpdate?.(state);
     } catch (err) {
       if (!cancelled) onError?.(err);
     } finally {

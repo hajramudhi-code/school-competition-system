@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { matchesApi } from "../../api/matchesApi";
 import { competitionsApi } from "../../api/competitionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
-import { hostApi } from "../../api/liveMatchApi";
+import { hostApi, normalizeLiveState, publishLiveState } from "../../api/liveMatchApi";
 import { LoadingState, ErrorState, useToast } from "../../components/common/index.jsx";
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
@@ -47,7 +47,9 @@ export default function HostPage() {
         const activeQuestionId = nextState?.currentQuestion?.id || nextState?.videoQuestion?.id;
         const shouldHideDismissedQuestion = dismissedQuestionRef.current
           && activeQuestionId === dismissedQuestionRef.current;
-        setState(shouldHideDismissedQuestion ? { ...nextState, currentQuestion: null, videoQuestion: null } : nextState);
+        const liveState = shouldHideDismissedQuestion ? { ...nextState, currentQuestion: null, videoQuestion: null } : nextState;
+        setState(liveState);
+        publishLiveState(matchId, liveState);
       })
       .catch((e) => setError(e.message));
   }, [matchId]);
@@ -61,7 +63,9 @@ export default function HostPage() {
     setBusy(true);
     try {
       const nextState = await hostApi.recordResult(matchId, questionId, result);
-      setState(nextState ?? state);
+      const liveState = normalizeLiveState(nextState) ?? state;
+      setState(liveState);
+      publishLiveState(matchId, liveState);
       if (!nextState) {
         refresh();
       }
@@ -140,7 +144,11 @@ export default function HostPage() {
     setBusy(true);
     try {
       const result = await fn();
-      if (result) setState(result);
+      if (result) {
+        const liveState = normalizeLiveState(result);
+        setState(liveState);
+        publishLiveState(matchId, liveState);
+      }
       refresh();
     } catch (e) {
       showToast(e.message, "error");
@@ -150,18 +158,22 @@ export default function HostPage() {
   }
 
   const updateFromMatchResponse = useCallback((response, fallbackMatchId) => {
-    const liveState = response?.liveState || response?.state || response;
+    const liveState = normalizeLiveState(response);
     const nextMatchId = response?.matchId || liveState?.matchId || fallbackMatchId;
     if (nextMatchId && nextMatchId !== matchId) setMatchId(nextMatchId);
-    if (liveState?.schoolA || liveState?.currentQuestion || liveState?.questionSlots) setState(liveState);
+    if (liveState?.schoolA || liveState?.currentQuestion || liveState?.questionSlots) {
+      setState(liveState);
+      publishLiveState(nextMatchId, liveState);
+    }
     return { liveState, nextMatchId };
   }, [matchId]);
 
   const transitionToMatch = useCallback((response, fallbackMatchId) => {
-    const liveState = response?.liveState || response?.state || response;
+    const liveState = normalizeLiveState(response);
     const nextMatchId = response?.matchId || liveState?.matchId || fallbackMatchId;
     if (nextMatchId && nextMatchId !== matchId) setMatchId(nextMatchId);
     setState(liveState);
+    publishLiveState(nextMatchId, liveState);
     setMatchStarted(true);
     setMatchEnded(false);
     dismissedQuestionRef.current = null;

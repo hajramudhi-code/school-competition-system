@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { matchesApi } from "../../api/matchesApi";
 import { competitionsApi } from "../../api/competitionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
-import { controllerApi, subscribeToLiveState } from "../../api/liveMatchApi";
+import { controllerApi, normalizeLiveState, subscribeToLiveState, subscribeToLocalLiveState } from "../../api/liveMatchApi";
 import { LoadingState, ErrorState, useToast } from "../../components/common/index.jsx";
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import ControllerNormalMode from "../../components/controller/ControllerNormalMode";
@@ -55,7 +55,7 @@ export default function ControllerPage() {
         setMatchId(null);
         return;
       }
-      setMatchId(match.id);
+      setMatchId((currentMatchId) => (currentMatchId === match.id ? currentMatchId : match.id));
     } catch (e) {
       setError(e.message || "Unable to load controller assignment.");
       showToast(e.message || "Unable to load controller assignment.", "error");
@@ -73,17 +73,24 @@ export default function ControllerPage() {
 
   useEffect(() => {
     if (!matchId) return undefined;
-    return subscribeToLiveState(matchId, {
+    const applyState = (nextState) => {
+      const liveState = normalizeLiveState(nextState);
+      if (liveState?.matchId === String(matchId)) {
+        setError(null);
+        setState(liveState);
+      }
+    };
+    const unsubscribeLocal = subscribeToLocalLiveState(matchId, applyState);
+    const unsubscribeRemote = subscribeToLiveState(matchId, {
       asController: true,
       intervalMs: 1000,
-      onUpdate: (nextState) => {
-        if (nextState) {
-          setError(null);
-          setState(nextState);
-        }
-      },
+      onUpdate: applyState,
       onError: (e) => setError(e.message || "Unable to refresh controller state."),
     });
+    return () => {
+      unsubscribeLocal();
+      unsubscribeRemote();
+    };
   }, [matchId]);
 
   const toggleMode = useCallback(() => {
