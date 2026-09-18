@@ -19,11 +19,7 @@ export default function ControllerNormalMode({ currentQuestion, timer, lastResul
             {timer && timer.state !== "IDLE" && <TimerBar timer={timer} toneClass={toneClass} />}
           </div>
         </div>
-      ) : (
-        <div className="controller-waiting card">
-          Waiting for the next question...
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

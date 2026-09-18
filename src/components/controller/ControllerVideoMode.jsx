@@ -39,9 +39,7 @@ export default function ControllerVideoMode({ videoQuestion, videoQuestions = []
           </button>
           );
         })
-      ) : (
-        <div className="controller-waiting card">Waiting for the Host to select a video question...</div>
-      )}
+      ) : null}
     </div>
   );
 }

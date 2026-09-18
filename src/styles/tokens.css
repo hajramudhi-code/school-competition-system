@@ -1128,7 +1128,7 @@ input, select, textarea {
   .controller-content > .controller-video-stage,
   .controller-content > .controller-video-gallery {
     flex: 0 1 auto;
-    min-height: clamp(300px, 34vh, 560px);
+    min-height: 0;
     width: min(100%, 1640px);
   }
 
