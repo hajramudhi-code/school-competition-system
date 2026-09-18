@@ -26,7 +26,7 @@ export default function ResultAnimation({ lastResult }) {
   }, [lastResult?.questionId, lastResult?.timestamp]);
 
   if (!lastResult || !visibleKey) return null;
-  const color = lastResult.result === "CORRECT" ? "var(--success)" : "var(--danger)";
+  const color = lastResult?.result === "CORRECT" ? "var(--success)" : "var(--danger)";
 
   return (
     <div

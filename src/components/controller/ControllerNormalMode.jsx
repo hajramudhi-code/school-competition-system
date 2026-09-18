@@ -6,7 +6,7 @@ import { useLiveCountdown } from "../common/useLiveCountdown";
 export default function ControllerNormalMode({ currentQuestion, timer, lastResult }) {
   const displayedQuestion = currentQuestion;
   const isResultVisible = lastResult?.questionId === displayedQuestion?.id;
-  const toneClass = isResultVisible && lastResult.result === "CORRECT" ? "has-result-correct" : isResultVisible ? "has-result-incorrect" : "";
+  const toneClass = isResultVisible && lastResult?.result === "CORRECT" ? "has-result-correct" : isResultVisible ? "has-result-incorrect" : "";
 
   return (
     <div className={`controller-question-stage ${displayedQuestion ? "has-question" : ""}`}>

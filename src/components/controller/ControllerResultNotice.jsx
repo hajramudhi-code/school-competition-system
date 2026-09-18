@@ -3,7 +3,7 @@ import React from "react";
 export default function ControllerResultNotice({ question, lastResult }) {
   if (!question || !lastResult) return null;
 
-  const result = String(lastResult.result || "").toUpperCase();
+  const result = String(lastResult?.result || "").toUpperCase();
   const isCorrect = result === "CORRECT";
   const answer = lastResult.correctAnswer ?? question.correctAnswer;
   const answerLabel = question.mode === "MULTIPLE_CHOICE" && answer

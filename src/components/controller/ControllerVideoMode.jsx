@@ -8,7 +8,7 @@ import { useLiveCountdown } from "../common/useLiveCountdown";
 export default function ControllerVideoMode({ videoQuestion, videoQuestions = [], timer, lastResult }) {
   const displayedQuestion = videoQuestion;
   const isResultVisible = lastResult?.questionId === displayedQuestion?.id;
-  const toneClass = isResultVisible && lastResult.result === "CORRECT" ? "has-result-correct" : isResultVisible ? "has-result-incorrect" : "";
+  const toneClass = isResultVisible && lastResult?.result === "CORRECT" ? "has-result-correct" : isResultVisible ? "has-result-incorrect" : "";
 
   return (
     <div className={displayedQuestion ? "controller-video-stage" : "controller-video-gallery"}>
