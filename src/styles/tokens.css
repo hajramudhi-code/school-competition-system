@@ -1805,6 +1805,10 @@ input, select, textarea {
   border-color: var(--border-color);
 }
 
+.landing-topbar-title {
+  color: #111827 !important;
+}
+
 .landing-main {
   background: var(--bg-main);
   background-image: none;
