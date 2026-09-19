@@ -178,7 +178,7 @@ export function Modal({ title, onClose, children, width = 480 }) {
   );
 }
 
-export function InlineConfirm({ title, message, onConfirm, onCancel }) {
+export function InlineConfirm({ title, message, onConfirm, onCancel, confirmLabel = "Delete" }) {
   return (
     <div className="card-elevated" style={{ marginBottom: 14, padding: 14, borderLeft: "3px solid var(--danger)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
       <div>
@@ -187,7 +187,7 @@ export function InlineConfirm({ title, message, onConfirm, onCancel }) {
       </div>
       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-        <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+        <button className="btn btn-danger" onClick={onConfirm}>{confirmLabel}</button>
       </div>
     </div>
   );

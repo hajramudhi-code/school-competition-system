@@ -4,7 +4,7 @@ import { matchesApi } from "../../api/matchesApi";
 import { competitionsApi } from "../../api/competitionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
 import { hostApi, normalizeLiveState, publishLiveState } from "../../api/liveMatchApi";
-import { LoadingState, ErrorState, useToast } from "../../components/common/index.jsx";
+import { LoadingState, ErrorState, InlineConfirm, useToast } from "../../components/common/index.jsx";
 import ScoreBoard from "../../components/competition/ScoreBoard";
 import HostNormalMode from "../../components/host/HostNormalMode";
 import HostVideoMode from "../../components/host/HostVideoMode";
@@ -42,6 +42,7 @@ export default function HostPage() {
   const [matchStarted, setMatchStarted] = useState(false);
   const [matchEnded, setMatchEnded] = useState(false);
   const [matchControlBusy, setMatchControlBusy] = useState(false);
+  const [rematchConfirm, setRematchConfirm] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const timeoutFiredRef = useRef(false);
@@ -276,7 +277,7 @@ export default function HostPage() {
 
   const chooseNextMatch = useCallback(async (rematch) => {
     if (!matchId || matchControlBusy) return;
-    if (rematch && !window.confirm("Start a rematch with the same schools?")) return;
+    setRematchConfirm(false);
     setMatchControlBusy(true);
     try {
       const response = rematch ? await hostApi.rematch(matchId) : await hostApi.nextMatch(matchId);
@@ -319,7 +320,7 @@ export default function HostPage() {
           busy={matchControlBusy}
           onStart={startMatch}
           onEnd={endMatch}
-          onRematch={() => chooseNextMatch(true)}
+          onRematch={() => setRematchConfirm(true)}
           onNext={() => chooseNextMatch(false)}
         />
         <div className="host-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -338,6 +339,15 @@ export default function HostPage() {
       </header>
 
       <div className="host-content" style={{ padding: "24px 24px 40px", maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+        {rematchConfirm && (
+          <InlineConfirm
+            title="Start rematch"
+            message="Start a rematch with the same schools?"
+            onCancel={() => setRematchConfirm(false)}
+            onConfirm={() => chooseNextMatch(true)}
+            confirmLabel="Rematch"
+          />
+        )}
         {error ? <ErrorState message={error} onRetry={loadAssignment} /> : !state || !subjects ? <LoadingState label="Loading match control..." /> : (
           <>
             <div className="card host-score-card">
