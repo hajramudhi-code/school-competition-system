@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { questionsApi, templatesApi } from "../../api/questionsApi";
 import { subjectsApi } from "../../api/subjectsApi";
+import { isLuckyQuestionSubject } from "../../utils/liveState";
 import { LoadingState, ErrorState, EmptyState, StatusBadge, Modal, usePolling, useToast } from "../../components/common/index.jsx";
 
 export default function QuestionBank() {
@@ -167,6 +168,7 @@ function ManualQuestionModal({ subjects, onClose, onSaved }) {
   const [isVideoQuestion, setIsVideoQuestion] = useState(false);
   const [personName, setPersonName] = useState("");
   const [personImageUrl, setPersonImageUrl] = useState("");
+  const [personImageFile, setPersonImageFile] = useState(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -184,6 +186,7 @@ function ManualQuestionModal({ subjects, onClose, onSaved }) {
       setError("Please choose a valid image file.");
       return;
     }
+    setPersonImageFile(file);
     const reader = new FileReader();
     reader.onload = () => setPersonImageUrl(String(reader.result || ""));
     reader.readAsDataURL(file);
@@ -194,10 +197,15 @@ function ManualQuestionModal({ subjects, onClose, onSaved }) {
     e.preventDefault();
     setError("");
     if (!subjectId || !text || !marks) return setError("Subject, question text and marks are required.");
-    if (isVideoQuestion && (!personName || !youtubeUrl)) return setError("Video questions need a person name and YouTube URL.");
+    if (isVideoQuestion && !isLuckyQuestionSubject(subjects.find((subject) => subject.id === subjectId))) {
+      return setError("Video questions must use the Lucky Question subject.");
+    }
+    if (isVideoQuestion && (!personName || !personImageUrl || !youtubeUrl)) {
+      return setError("Video questions need a person name, image, and YouTube URL.");
+    }
     setBusy(true);
     try {
-      await questionsApi.create({
+      const payload = {
         subjectId,
         mode,
         text,
@@ -209,9 +217,19 @@ function ManualQuestionModal({ subjects, onClose, onSaved }) {
         correctAnswer,
         isVideoQuestion,
         personName: isVideoQuestion ? personName : undefined,
-        personImageUrl: isVideoQuestion ? personImageUrl : undefined,
+        personImageUrl: isVideoQuestion && !personImageFile ? personImageUrl : undefined,
         youtubeUrl: isVideoQuestion ? youtubeUrl : undefined,
-      });
+      };
+      if (isVideoQuestion && personImageFile) {
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== undefined) formData.append(key, String(value));
+        });
+        formData.append("personImage", personImageFile);
+        await questionsApi.createWithImage(formData);
+      } else {
+        await questionsApi.create(payload);
+      }
       showToast("Question added", "success");
       onSaved();
     } catch (e) {

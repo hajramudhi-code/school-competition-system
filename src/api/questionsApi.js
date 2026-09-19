@@ -5,6 +5,7 @@ export const questionsApi = {
   list: (params) => apiClient.get(`/questions${toQuery(params)}`),
   get: (id) => apiClient.get(`/questions/${id}`),
   create: (data) => apiClient.post("/questions", data),
+  createWithImage: (formData) => apiClient.postForm("/questions", formData),
   update: (id, data) => apiClient.patch(`/questions/${id}`, data),
   remove: (id) => apiClient.delete(`/questions/${id}`),
   setStatus: (id, status) => apiClient.patch(`/questions/${id}/status`, { status }),
