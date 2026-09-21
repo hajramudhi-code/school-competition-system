@@ -473,7 +473,8 @@ The active frontend competition payload no longer includes `matchDurationMinutes
 
 ## 3.6 Subjects API
 
-Subject code is no longer sent by the active frontend.
+Subject code is sent by the active frontend when creating a subject and is
+optional only when updating an existing subject.
 
 Create:
 
@@ -482,7 +483,7 @@ POST /api/subjects
 ```
 
 ```json
-{ "name": "History" }
+{ "name": "History", "code": "HISTORY" }
 ```
 
 Update:
@@ -495,7 +496,9 @@ PATCH /api/subjects/:id
 { "name": "World History" }
 ```
 
-The backend must make `code` optional or remove it from validation. Existing stored codes may remain for backward compatibility, but the API must not reject requests that omit `code`.
+The backend must require a unique `code` when creating a subject. On update,
+`code` may be omitted to preserve the existing value; if supplied, it must
+remain unique. Existing stored codes remain valid.
 
 ## 3.7 Sponsors API
 
@@ -589,7 +592,7 @@ GET  /api/reports/:id/file
 - [ ] Return a new `matchId` from rematch and next-match responses.
 - [ ] Return 20 fresh normal question slots as `AVAILABLE` when a subject is selected for a new match.
 - [ ] Return 4 stable video questions for the active video subject, or return the full list with stable ordering.
-- [ ] Make Subject `code` optional.
+- [ ] Require a unique Subject `code` on create; allow it to be omitted on update.
 - [ ] Support Sponsor delete.
 - [ ] Stop requiring old sponsor contact/slogan/report fields.
 - [ ] Keep public-state safe before reveal and reveal `correctAnswer` only after result.

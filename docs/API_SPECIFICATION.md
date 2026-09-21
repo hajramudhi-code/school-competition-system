@@ -40,7 +40,7 @@ This document is the backend handoff contract for every API currently called by 
 - IDs are strings (UUIDs).
 - Every authenticated endpoint requires `Authorization: Bearer <token>`.
 - Role gate values: `ADMIN`, `HOST`, `CONTROLLER`.
-- Uploaded logos/images must be PNG, JPEG, or WebP, no larger than 2 MB, between 128 and 2048 px on each side, and use a 1:1 aspect ratio with a tolerance of 15%.
+- Uploaded logos/images must be PNG, JPEG, or WebP and no larger than 10 MB. There is no width, height, or aspect-ratio restriction.
 - Upload endpoints return a persistent `logoUrl` or `personImageUrl` for later reads.
 
 ### Shared object: `School`
@@ -203,7 +203,11 @@ Notes:
 `DELETE /api/schools/:id`
 - Auth: ADMIN.
 - Success `204`.
-- Errors: `409` if the school is referenced by a competition or match. Prefer `PATCH /status` when historical data must be retained.
+- If the school has historical competition or match references, retire it by setting
+  `status` to `DISABLED`; retain the referenced row and historical results.
+- A hard delete is allowed only when the school has no references at all.
+- Errors: `409` only when the school is currently required by an active or upcoming
+  competition. Use `PATCH /status` to disable it without changing historical data.
 
 ---
 
@@ -229,7 +233,12 @@ Mirrors Schools.
 `DELETE /api/subjects/:id`
 - Auth: ADMIN.
 - Success `204`.
-- Errors: `409` if the subject is referenced by questions or competitions. Prefer `PATCH /status` when historical data must be retained.
+- If the subject has historical question or competition references, retire it by setting
+  `status` to `DISABLED`; do not delete the referenced row and do not return
+  `RESOURCE_IN_USE`.
+- A hard delete is allowed only when the subject has no references at all.
+- Errors: `409` only when the subject is currently required by an active or upcoming
+  competition. Use `PATCH /status` to disable it without changing historical data.
 
 ### 5.3 Update Subject
 `PATCH /api/subjects/:id`
@@ -275,7 +284,11 @@ Mirrors Schools.
 `DELETE /api/questions/:id`
 - Auth: ADMIN.
 - Success `204`.
-- Errors: `409` if referenced by a match already in progress.
+- If the question has been used by any completed or historical match, retire it by
+  setting `status` to `DISABLED`; retain the question and match history.
+- A hard delete is allowed only when the question has no match or result references.
+- Errors: `409` only when the question is currently selected or required by an
+  `IN_PROGRESS` match. Use `PATCH /status` to disable it without changing history.
 
 ### 6.6 Enable / Disable Question
 `PATCH /api/questions/:id/status`
@@ -368,7 +381,11 @@ Mirrors Schools.
 `DELETE /api/competitions/:id`
 - Auth: ADMIN.
 - Success `204`.
-- Errors: `409` if matches already started.
+- A competition with only `COMPLETED` matches is retired/archived from normal admin
+  lists while its matches, results, reports, and audit history are retained.
+- A competition with no matches may be hard-deleted.
+- Errors: `409` only when it has an `UPCOMING` or `IN_PROGRESS` match. Completion of
+  the competition is not a reason to return `RESOURCE_IN_USE`.
 
 ---
 

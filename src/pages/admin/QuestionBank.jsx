@@ -186,6 +186,10 @@ function ManualQuestionModal({ subjects, onClose, onSaved }) {
       setError("Please choose a valid image file.");
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image must be 10 MB or smaller.");
+      return;
+    }
     setPersonImageFile(file);
     const reader = new FileReader();
     reader.onload = () => setPersonImageUrl(String(reader.result || ""));

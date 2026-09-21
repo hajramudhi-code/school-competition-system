@@ -288,9 +288,11 @@ These lifecycle endpoints are called by the current Host frontend but are missin
 
 ### `POST /api/matches/:id/rematch`
 
-- Reset the same match record for the same schools.
-- Clear current question, timer, slots, and result state.
-- Return updated `LiveMatchState` using the same `matchId`.
+- Create a new match record for the same schools; never reset or overwrite the
+  completed match record.
+- Keep the old match, results, and question history unchanged.
+- Clear the new match's question, timer, slots, and result state.
+- Return the new `matchId` and its updated `LiveMatchState`.
 - Reject a future-dated rematch.
 
 ### `POST /api/matches/:id/next`

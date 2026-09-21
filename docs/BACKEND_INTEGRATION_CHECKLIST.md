@@ -216,7 +216,13 @@ Success response:
 204 No Content
 ```
 
-If an entity is referenced by historical records, return:
+Historical references must not block safe retirement. For a referenced subject,
+set `status: DISABLED` and retain the row. For a competition whose matches are all
+`COMPLETED`, archive it from normal lists while retaining matches and results.
+
+Return `RESOURCE_IN_USE` only when an entity is still needed by active or upcoming
+work, for example a subject used by an active competition or a competition with an
+`UPCOMING`/`IN_PROGRESS` match:
 
 ```json
 {
@@ -242,4 +248,6 @@ Before integration is considered complete, verify:
 7. Assign Host and Controller; reload competition detail and confirm both names are present.
 8. Request questions with `pageSize=20`; confirm pagination metadata and record count.
 9. Delete an unused school/subject; confirm HTTP `204`.
-10. Try deleting a referenced entity; confirm HTTP `409` with the documented error shape.
+10. Retire a referenced subject; confirm HTTP `204`, `status: DISABLED`, and intact historical questions.
+11. Delete a completed competition; confirm HTTP `204`, hidden from normal lists, and intact matches/results.
+12. Try deleting a subject used by an active competition or a competition with an upcoming/in-progress match; confirm HTTP `409` with the documented error shape.

@@ -79,11 +79,14 @@ export default function Matches() {
 
     setBusy(true);
     try {
-      const result = await competitionsApi.generateFixture(selectedId, {
+      const schedule = {
         rounds: rounds.map((round) => ({ ...round, matchCount: Number(round.matchCount) })),
-      });
+      };
+      const result = generated
+        ? await competitionsApi.regenerateFixture(selectedId, schedule)
+        : await competitionsApi.generateFixture(selectedId, schedule);
       setGenerated(result);
-      showToast("Matches generated", "success");
+      showToast(generated ? "Matches regenerated" : "Matches generated", "success");
     } catch (e) {
       setError(e.message);
     } finally {
