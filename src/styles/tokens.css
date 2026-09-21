@@ -1252,6 +1252,13 @@ input, select, textarea {
   min-height: 0;
 }
 
+.controller-normal-page .controller-question-number {
+  min-height: 0;
+  padding: 2px 4px;
+  font-size: clamp(26px, 3.2vw, 48px);
+  line-height: 1;
+}
+
 .controller-page .controller-fullscreen:hover {
   background: #123f70;
   color: #fff;
