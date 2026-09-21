@@ -15,6 +15,8 @@ export default function CompetitionSetup() {
   const [showCreate, setShowCreate] = useState(false);
   const [editFor, setEditFor] = useState(null);
   const [assignFor, setAssignFor] = useState(null);
+  const [deleteFor, setDeleteFor] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [staffNames, setStaffNames] = useState({});
   const { showToast } = useToast();
 
@@ -36,6 +38,21 @@ export default function CompetitionSetup() {
       .catch((e) => setError(e.message));
   }
   usePolling(load);
+
+  async function removeCompetition() {
+    if (!deleteFor) return;
+    setDeleting(true);
+    try {
+      await competitionsApi.remove(deleteFor.id);
+      setDeleteFor(null);
+      showToast("Competition deleted", "success");
+      load();
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!competitions || !schools || !subjects || !sponsors) return <LoadingState label="Loading competition setup..." />;
@@ -66,6 +83,15 @@ export default function CompetitionSetup() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {competitions.map((c) => (
               <div key={c.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {deleteFor?.id === c.id && (
+                  <InlineConfirm
+                    title="Delete competition"
+                    message={`Are you sure you want to delete ${c.name}?`}
+                    onCancel={() => setDeleteFor(null)}
+                    onConfirm={removeCompetition}
+                    confirmLabel={deleting ? "Deleting..." : "Delete"}
+                  />
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                   <div>
                     <h3 style={{ marginBottom: 6 }}>{c.name}</h3>
@@ -80,6 +106,9 @@ export default function CompetitionSetup() {
                     </button>
                     <button className="btn btn-secondary" onClick={() => setAssignFor(c)}>
                       Assign Host/Controller
+                    </button>
+                    <button className="btn btn-danger" onClick={() => setDeleteFor(c)} disabled={deleting}>
+                      Delete
                     </button>
                   </div>
                 </div>
