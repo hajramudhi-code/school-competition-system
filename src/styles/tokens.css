@@ -1057,9 +1057,16 @@ input, select, textarea {
 }
 
 .controller-normal-page .controller-question-row {
+  flex: 1 1 auto;
+  min-height: 0;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: 12px;
+}
+
+.controller-normal-page .controller-question-stage:not(.has-question) {
+  flex: 0 0 0;
+  min-height: 0;
 }
 
 .controller-normal-page .controller-question-number {
@@ -1238,6 +1245,11 @@ input, select, textarea {
   .controller-content > .controller-video-gallery {
     min-height: 0;
   }
+}
+
+.controller-normal-page .controller-content > .controller-question-row {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .controller-page .controller-fullscreen:hover {
